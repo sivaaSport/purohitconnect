@@ -235,12 +235,24 @@ PUJAS = [
     ('Special Rituals', 'Bhagavad Gita Path', 2.5, 'Recitation of the Gita for peace, grief support, or a sankalpa.'),
 ]
 
+PUJA_ORDER = [name for _, name, _, _ in PUJAS]
+
 
 def category_sort_key(category):
     try:
         return CATEGORY_ORDER.index(category.name)
     except ValueError:
         return len(CATEGORY_ORDER)
+
+
+def puja_sort_key(puja):
+    category = getattr(puja, 'category', None)
+    category_index = category_sort_key(category) if category is not None else len(CATEGORY_ORDER)
+    try:
+        puja_index = PUJA_ORDER.index(puja.name)
+    except ValueError:
+        puja_index = len(PUJA_ORDER)
+    return (category_index, puja_index, puja.name)
 
 
 def seed_hindu_pujas():

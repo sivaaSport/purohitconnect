@@ -2,7 +2,7 @@ from .base import *
 
 DEBUG = env.bool('DJANGO_DEBUG', default=True)
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['*']
 
 # Database (SQLite for local dev fallback, PostgreSQL is better)
 # The implementation plan mentioned PostgreSQL, so we'll configure it to use that by default if provided, otherwise fallback to SQLite

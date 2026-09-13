@@ -35,9 +35,11 @@ INSTALLED_APPS = [
     'apps.bookings',
     'apps.reviews',
     'apps.dashboard',
+    'apps.api',
 ]
 
 MIDDLEWARE = [
+    'apps.api.middleware.MobileApiCorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

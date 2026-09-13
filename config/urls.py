@@ -7,6 +7,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # App URLs will be included here as they are created
     path('', include('apps.core.urls')),
+    path('api/v1/', include('apps.api.urls')),
     path('accounts/', include('apps.accounts.urls')),
     path('purohits/', include('apps.purohits.urls')),
     path('pujas/', include('apps.pujas.urls')),

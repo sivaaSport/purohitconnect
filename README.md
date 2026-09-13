@@ -1,6 +1,6 @@
 # PurohitConnect
 
-A comprehensive platform connecting devotees with purohits for religious ceremonies and services. Built with Django, featuring wallet payments, booking management, and admin analytics.
+A comprehensive platform connecting devotees with purohits for religious ceremonies and services. It includes the Django website and the Flutter devotee app.
 
 ## Features
 
@@ -12,6 +12,7 @@ A comprehensive platform connecting devotees with purohits for religious ceremon
 - **Admin Dashboard**: Comprehensive analytics and payment reporting
 - **Notification System**: In-app notifications and SMS alerts
 - **Review System**: Rate and review completed services
+- **Mobile App**: Flutter devotee app for home, bookings, wallet, and support
 
 ## Tech Stack
 
@@ -20,6 +21,7 @@ A comprehensive platform connecting devotees with purohits for religious ceremon
 - **Payments**: Razorpay integration
 - **SMS**: Twilio integration
 - **Frontend**: HTML5, CSS3, JavaScript, Bootstrap
+- **Mobile**: Flutter (web, iOS, Android)
 - **Deployment**: Gunicorn, Nginx, systemd
 
 ## Quick Start
@@ -28,7 +30,7 @@ A comprehensive platform connecting devotees with purohits for religious ceremon
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-org/purohitconnect.git
+   git clone https://github.com/sivaaSport/purohitconnect.git
    cd purohitconnect
    ```
 
@@ -57,7 +59,13 @@ A comprehensive platform connecting devotees with purohits for religious ceremon
 
 6. **Run development server**
    ```bash
-   python manage.py runserver
+   python manage.py runserver 0.0.0.0:8001
+   ```
+
+7. **Run the Flutter app**
+   ```bash
+   cd mobile
+   flutter run -d chrome --web-port=5173
    ```
 
 ### Production Deployment
@@ -86,8 +94,8 @@ Copy `.env.example` to `.env` and configure:
 ## API Endpoints
 
 ### Authentication
-- `POST /accounts/send-otp/` - Send OTP
-- `POST /accounts/verify-otp/` - Verify OTP and login
+- `POST /api/v1/auth/send-otp/` - Send OTP
+- `POST /api/v1/auth/verify-otp/` - Verify OTP and login
 
 ### Bookings
 - `GET /purohits/` - List purohits
@@ -117,6 +125,7 @@ Run specific app tests:
 ```bash
 python manage.py test apps.accounts
 python manage.py test apps.bookings
+python manage.py test apps.api
 ```
 
 ## Project Structure
@@ -128,7 +137,9 @@ purohitconnect/
 │   ├── bookings/           # Booking management
 │   ├── purohits/           # Purohit profiles
 │   ├── dashboard/          # User/admin dashboards
+│   ├── api/                # Mobile REST API
 │   └── core/               # Shared functionality
+├── mobile/                 # Flutter devotee app
 ├── config/                 # Django settings
 ├── static/                 # Static assets
 ├── templates/              # HTML templates
@@ -173,6 +184,6 @@ If you discover security vulnerabilities, please email security@purohitconnect.c
 - [x] Wallet and Razorpay integration
 - [x] Admin analytics dashboard
 - [x] Mixed checkout support
-- [ ] Mobile app development
+- [x] Mobile app development
 - [ ] Multi-language support
 - [ ] Advanced reporting features

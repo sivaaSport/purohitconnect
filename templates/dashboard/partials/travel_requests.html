@@ -1,0 +1,116 @@
+<section id="travel-requests" class="pc-catalog ph-chapter" aria-labelledby="travel-requests-heading">
+    <div class="ph-chapter-head">
+        <div>
+            <p class="pc-catalog-kicker">Exceptions</p>
+            <h2 id="travel-requests-heading">Travel requests</h2>
+            <p>
+                If a devotee wants you somewhere you do not already offer, they ask first.
+                Accept with an optional travel fee, or decline. They pay only after they book the accepted visit.
+            </p>
+        </div>
+        <div class="pc-catalog-count">{{ pending_travel_count }} waiting · {{ travel_requests|length }} open</div>
+    </div>
+
+    <form id="travel-policy-form" method="POST" action="{% url 'dashboard:update_travel_policy' %}" class="ph-policy">
+        {% csrf_token %}
+        <div class="ph-policy-status {% if purohit.accepts_travel_requests %}is-on{% else %}is-off{% endif %}">
+            <p class="ph-policy-kicker">Request policy</p>
+            <h3>{% if purohit.accepts_travel_requests %}Travel requests are on{% else %}Travel requests are off{% endif %}</h3>
+            <p>
+                {% if purohit.accepts_travel_requests %}
+                    Devotees can ask you to visit a new place. You still choose accept or decline. No payment until they book.
+                {% else %}
+                    Devotees can only book places you already offer above. Turn this on if you are willing to consider extra trips.
+                {% endif %}
+            </p>
+        </div>
+        <div class="pc-field">
+            <label for="travel-note">Note shown to devotees <span>(optional)</span></label>
+            <input id="travel-note" type="text" name="travel_note" maxlength="240" value="{{ purohit.travel_note }}" placeholder="e.g. I come if the devotee covers train and stay">
+        </div>
+        <div class="ph-policy-actions">
+            <button type="submit" name="accepts_travel_requests" value="on" class="btn {% if purohit.accepts_travel_requests %}btn-primary{% else %}btn-outline{% endif %}">
+                {% if purohit.accepts_travel_requests %}Keep requests on{% else %}Turn travel requests on{% endif %}
+            </button>
+            <button type="submit" name="accepts_travel_requests" value="off" class="btn {% if not purohit.accepts_travel_requests %}btn-primary{% else %}btn-outline{% endif %}">
+                {% if purohit.accepts_travel_requests %}Turn travel requests off{% else %}Keep requests off{% endif %}
+            </button>
+        </div>
+    </form>
+
+    {% if travel_requests %}
+    <div class="ph-request-list">
+        {% for item in travel_requests %}
+        <article class="ph-request">
+            <div class="ph-book-head">
+                <div>
+                    <p class="ph-book-id">{{ item.request_id }}</p>
+                    <h3>{{ item.puja_package.puja.name|default:"Visit request" }}</h3>
+                </div>
+                <span class="pc-loc-badge {% if item.status == 'accepted' %}is-visit{% else %}is-pending{% endif %}">{{ item.get_status_display }}</span>
+            </div>
+            <dl class="ph-meta">
+                <div>
+                    <dt>Devotee</dt>
+                    <dd>{{ item.customer.get_full_name|default:item.customer.username }}</dd>
+                </div>
+                <div>
+                    <dt>When they want you</dt>
+                    <dd>{{ item.preferred_date|date:"D, d M Y" }}{% if item.preferred_time %} · {{ item.preferred_time|time:"H:i" }}{% endif %}</dd>
+                </div>
+                <div>
+                    <dt>Place</dt>
+                    <dd>{{ item.area.name }}, {{ item.city.name }}</dd>
+                </div>
+                {% if item.expires_at and item.status == 'accepted' %}
+                <div>
+                    <dt>Accept unlock</dt>
+                    <dd>Expires {{ item.expires_at|date:"d M, H:i" }} if they do not book</dd>
+                </div>
+                {% endif %}
+                {% if item.address %}
+                <div class="ph-meta-full">
+                    <dt>Address</dt>
+                    <dd>{{ item.address }}</dd>
+                </div>
+                {% endif %}
+                {% if item.message %}
+                <div class="ph-meta-full">
+                    <dt>Message</dt>
+                    <dd>“{{ item.message }}”</dd>
+                </div>
+                {% endif %}
+            </dl>
+            {% if item.status == 'pending' %}
+            <form method="POST" action="{% url 'dashboard:respond_travel_request' item.id %}" class="ph-request-form">
+                {% csrf_token %}
+                <div class="pc-field">
+                    <label>Travel fee (₹)</label>
+                    <input type="number" name="travel_fee" min="0" step="1" value="0">
+                </div>
+                <div class="pc-field">
+                    <label>Note back to devotee <span>(optional)</span></label>
+                    <input type="text" name="purohit_response" maxlength="240" placeholder="e.g. I can come if stay is arranged">
+                </div>
+                <div class="pc-request-buttons">
+                    <button type="submit" name="decision" value="accept" class="btn btn-primary">Accept visit</button>
+                    <button type="submit" name="decision" value="decline" class="btn btn-outline is-danger">Decline</button>
+                </div>
+            </form>
+            {% elif item.status == 'accepted' %}
+            <p class="ph-note is-ok">
+                Accepted{% if item.travel_fee %} with a ₹{{ item.travel_fee|floatformat:"0" }} travel fee{% endif %}.
+                Waiting for the devotee to book — they have not paid yet.
+            </p>
+            {% endif %}
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="ph-empty">
+        <p class="pc-catalog-kicker">Inbox</p>
+        <h3>No open travel requests</h3>
+        <p>When a devotee asks you to visit a place you do not already offer, the request will appear here with their date, area, and message.</p>
+    </div>
+    {% endif %}
+</section>

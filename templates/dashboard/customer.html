@@ -1,0 +1,733 @@
+{% extends 'base.html' %}
+
+{% block title %}Home | PurohitConnect{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+    .dv-home { margin-bottom: 1.5rem; }
+    .dv-hero {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 1.25rem;
+        flex-wrap: wrap;
+        padding: 1.4rem 1.5rem 1.5rem;
+        border-radius: 24px;
+        background:
+            radial-gradient(circle at 12% 0%, rgba(245, 158, 11, 0.22), transparent 42%),
+            linear-gradient(135deg, #fff7ed, #ffffff 55%);
+        border: 1px solid rgba(180, 83, 9, 0.14);
+    }
+    [data-theme="dark"] .dv-hero {
+        background:
+            radial-gradient(circle at 12% 0%, rgba(250, 204, 21, 0.18), transparent 42%),
+            linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.88));
+        border-color: rgba(250, 204, 21, 0.22);
+    }
+    .dv-kicker {
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--color-primary);
+        margin: 0 0 0.4rem;
+    }
+    .dv-hero h1 { margin: 0 0 0.4rem; font-size: 1.85rem; }
+    .dv-lead { margin: 0; color: var(--color-text-muted); max-width: 36rem; }
+    .dv-hero-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+    .dv-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin-top: 0.9rem;
+    }
+    .dv-stat {
+        padding: 0.85rem 1rem;
+        border-radius: 16px;
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+    }
+    .dv-stat strong { display: block; font-size: 1.35rem; line-height: 1.1; }
+    .dv-stat span { font-size: 0.78rem; color: var(--color-text-muted); }
+    .dv-next {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        padding: 1.15rem 1.25rem;
+        border-radius: 20px;
+        margin-bottom: 1.25rem;
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+    }
+    .dv-next-when {
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: var(--color-primary);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+    .dv-split {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+        gap: 1.25rem;
+        margin-bottom: 1.5rem;
+        align-items: start;
+    }
+    .dv-suggest {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 0.85rem;
+        margin: 0 0 1.75rem;
+    }
+    .dv-suggest a {
+        display: block;
+        padding: 1rem;
+        border-radius: 16px;
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+        color: var(--color-text-main);
+        text-decoration: none;
+        transition: transform 0.18s ease, border-color 0.18s ease;
+    }
+    .dv-suggest a:hover {
+        transform: translateY(-2px);
+        border-color: var(--color-primary);
+        color: var(--color-text-main);
+    }
+    .dv-empty {
+        text-align: center;
+        padding: 2rem 1.25rem;
+        border-radius: 20px;
+        border: 1px dashed var(--color-border);
+        background: var(--color-bg-card);
+    }
+    .pc-cal-day.dv-idle {
+        background: transparent;
+        border-color: transparent;
+        opacity: 0.7;
+    }
+    .pc-cal-day.dv-idle.is-today { opacity: 1; }
+    @media (max-width: 860px) {
+        .dv-split, .dv-stats { grid-template-columns: 1fr; }
+    }
+    .dv-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .ph-jump {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 1rem;
+    }
+    .ph-jump a {
+        padding: 0.45rem 0.85rem;
+        border-radius: 999px;
+        border: 1px solid var(--color-border);
+        background: var(--color-bg-card);
+        color: var(--color-text-main);
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+    .ph-jump a:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .ph-workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.8fr);
+        gap: 2rem;
+        align-items: start;
+        margin: 0 0 2.75rem;
+    }
+    .ph-chapter { margin: 0 0 2.75rem; }
+    .ph-chapter-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 16px;
+        margin-bottom: 1.1rem;
+        flex-wrap: wrap;
+    }
+    .ph-chapter-head h2, .ph-calendar h2 { margin: 0 0 6px; font-size: 1.55rem; }
+    .ph-chapter-head p { margin: 0; max-width: 44rem; color: var(--color-text-muted); font-size: 0.95rem; line-height: 1.5; }
+    .ph-group-title { display: flex; align-items: center; gap: 8px; margin: 1.25rem 0 0.7rem; font-size: 0.95rem; }
+    .ph-group-title span { font-size: 0.75rem; color: var(--color-text-muted); border: 1px solid var(--color-border); border-radius: 999px; padding: 1px 8px; }
+    .ph-book-list, .ph-request-list { display: grid; gap: 14px; }
+    .ph-book, .ph-request, .ph-empty, .ph-live {
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+        border-radius: 18px;
+        padding: 1.15rem 1.2rem 1.2rem;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+    }
+    .ph-book-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.85rem; }
+    .ph-book-id { margin: 0 0 4px; font-family: ui-monospace, monospace; font-size: 0.78rem; color: var(--color-text-muted); }
+    .ph-book h3, .ph-request h3, .ph-empty h3, .ph-live h2 { margin: 0; font-size: 1.2rem; }
+    .ph-book h3.is-cancelled { text-decoration: line-through; opacity: 0.65; }
+    .ph-book-status { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+    .ph-book-amount { font-size: 1.2rem; color: var(--color-secondary); }
+    .status-pill {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 6px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 800;
+        cursor: pointer; border: none; background: rgba(33, 150, 243, 0.1); color: #1565C0;
+    }
+    .status-pill i { width: 14px; height: 14px; }
+    .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .ph-status-reschedule_pending { background: rgba(245, 158, 11, 0.12); color: #B45309; }
+    .ph-status-cancelled { background: rgba(239, 68, 68, 0.1); color: #B91C1C; }
+    .ph-status-completed { background: rgba(16, 185, 129, 0.1); color: #047857; }
+    .ph-status-started { background: rgba(139, 92, 246, 0.1); color: #7C3AED; }
+    .ph-status-awaiting_payment { background: rgba(239, 68, 68, 0.12); color: #DC2626; }
+    .ph-status-pending_confirmation { background: rgba(255, 166, 77, 0.12); color: #B45309; }
+    .ph-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px; margin: 0 0 1rem; }
+    .ph-meta dt { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: 3px; }
+    .ph-meta dd { margin: 0; font-size: 0.95rem; line-height: 1.45; }
+    .ph-meta-full { grid-column: 1 / -1; }
+    .ph-book-actions, .ph-note-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .ph-btn-sm { padding: 0.45rem 0.85rem; font-size: 0.85rem; }
+    .ph-btn-sm i { width: 14px; height: 14px; }
+    .btn.is-danger, .ph-btn-sm.is-danger { color: #EF4444 !important; border-color: #EF4444 !important; }
+    .btn.is-warn, .ph-btn-sm.is-warn { color: #B45309 !important; border-color: #F59E0B !important; }
+    .ph-note, .ph-review { margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; font-size: 0.9rem; line-height: 1.45; }
+    .ph-note p { margin: 4px 0 0; }
+    .ph-note.is-warn { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); color: #B45309; }
+    .ph-note.is-ok { background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.22); color: #047857; }
+    .ph-note-row { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .ph-review { background: rgba(255, 215, 0, 0.06); border: 1px solid rgba(255, 215, 0, 0.22); }
+    .ph-review-rating { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+    .ph-stars { display: flex; gap: 3px; align-items: center; }
+    .ph-star { display: block; flex: 0 0 auto; }
+    .ph-star.is-on path { fill: #F59E0B; stroke: #F59E0B; }
+    .ph-review-edit {
+        background: none;
+        border: none;
+        padding: 0 0 0 6px;
+        cursor: pointer;
+        color: var(--color-primary);
+        display: inline-flex;
+    }
+    .ph-review-edit i, .ph-review-edit svg { width: 14px; height: 14px; }
+    .ph-empty { text-align: left; }
+    .ph-empty p { margin: 6px 0 14px; color: var(--color-text-muted); }
+    .ph-review-ask {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.5rem;
+        padding: 1.15rem 1.25rem;
+        border-radius: 18px;
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.12), rgba(16, 185, 129, 0.08));
+        border: 1px solid rgba(245, 158, 11, 0.28);
+    }
+    .ph-review-ask h2 { margin: 0 0 0.3rem; font-size: 1.25rem; }
+    .ph-review-ask p { margin: 0; color: var(--color-text-muted); }
+    .ph-live { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; border-color: rgba(139, 92, 246, 0.28); }
+    .ph-live-kicker { margin: 0 0 4px; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #7C3AED; }
+    .ph-live-copy p { margin: 4px 0 0; color: var(--color-text-muted); }
+    .ph-live-code { display: flex; gap: 6px; flex-wrap: wrap; }
+    .ph-keys { margin: 0 0 1rem; }
+    .ph-keys-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+    }
+    .ph-keys-kicker {
+        margin: 0;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--color-primary);
+    }
+    .ph-keys-head p:last-child { margin: 0; font-size: 0.8rem; color: var(--color-text-muted); }
+    .ph-key-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 10px; }
+    .ph-key-card {
+        position: relative;
+        padding: 12px 14px 14px;
+        border-radius: 16px;
+        overflow: hidden;
+    }
+    .ph-key-card::after {
+        content: "";
+        position: absolute;
+        inset: auto -20% -40% auto;
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        pointer-events: none;
+        opacity: 0.35;
+    }
+    .ph-key-card.is-start {
+        background: linear-gradient(160deg, rgba(139, 92, 246, 0.14), rgba(255, 255, 255, 0.72));
+        border: 1px solid rgba(139, 92, 246, 0.28);
+    }
+    .ph-key-card.is-start::after { background: #8B5CF6; }
+    .ph-key-card.is-done {
+        background: linear-gradient(160deg, rgba(245, 158, 11, 0.16), rgba(16, 185, 129, 0.08));
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .ph-key-card.is-done::after { background: #F59E0B; }
+    .ph-key-label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+    }
+    .ph-key-row { display: flex; gap: 6px; }
+    .ph-key {
+        min-width: 2.05rem;
+        height: 2.45rem;
+        padding: 0 0.15rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        font-family: ui-monospace, 'Outfit', monospace;
+        font-size: 1.3rem;
+        font-weight: 800;
+        line-height: 1;
+        background: #fff;
+        box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08), inset 0 -2px 0 rgba(15, 23, 42, 0.06);
+    }
+    .ph-key-card.is-start .ph-key { color: #6D28D9; }
+    .ph-key-card.is-done .ph-key, .ph-live-code .ph-key { color: #B45309; }
+    [data-theme="dark"] .ph-key-card.is-start { background: linear-gradient(160deg, rgba(139, 92, 246, 0.22), rgba(2, 6, 23, 0.7)); }
+    [data-theme="dark"] .ph-key-card.is-done { background: linear-gradient(160deg, rgba(250, 204, 21, 0.16), rgba(2, 6, 23, 0.7)); }
+    [data-theme="dark"] .ph-key {
+        background: rgba(15, 23, 42, 0.92);
+        box-shadow: 0 10px 18px rgba(0, 0, 0, 0.35), inset 0 -2px 0 rgba(255, 255, 255, 0.04);
+    }
+    [data-theme="dark"] .ph-key-card.is-start .ph-key { color: #C4B5FD; }
+    [data-theme="dark"] .ph-key-card.is-done .ph-key,
+    [data-theme="dark"] .ph-live-code .ph-key { color: #FDE68A; }
+    .pc-catalog-count { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--color-border); background: var(--color-bg-card); font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted); }
+    .ph-calendar-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+    @media (max-width: 980px) {
+        .ph-workspace, .ph-meta, .dv-stats { grid-template-columns: 1fr; }
+        .ph-book-status { align-items: flex-start; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if has_dual_workspace %}
+<div class="container" style="margin-top: 1.25rem;">
+    <div class="card" style="padding: 12px 16px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center;">
+        <div>
+            <strong>Devotee workspace</strong>
+            <div style="font-size:0.85rem; color:var(--color-text-muted); margin-top:2px;">Rituals you booked for your family. Incoming priest work lives in Purohit workspace.</div>
+        </div>
+        <a href="{% url 'accounts:switch_workspace' %}?workspace=purohit" class="btn btn-outline" style="padding:0.45rem 0.9rem; font-size:0.85rem;">Open purohit workspace</a>
+    </div>
+</div>
+{% endif %}
+<div class="container" x-data="{ 
+    timelineOpen: false, 
+    activeBooking: null,
+    bookings: [
+        {% for booking in bookings %}
+        {
+            id: '{{ booking.booking_id }}',
+            puja: '{{ booking.puja_package.puja.name|escapejs }}',
+            status: '{{ booking.status }}',
+            purohit: '{{ booking.purohit.name|escapejs }}',
+            event_date: '{{ booking.event_date|date:"Y-m-d" }}',
+            event_time: '{% if booking.event_time %}{{ booking.event_time|time:"H:i" }}{% endif %}',
+            event_display: '{{ booking.event_date|date:"d M, Y" }}{% if booking.event_time %} at {{ booking.event_time|time:"H:i" }}{% endif %}',
+            started_at: '{% if booking.started_at %}true{% else %}false{% endif %}',
+            steps: [
+                { label: 'Booking Requested by You', time: '{{ booking.created_at|date:'d M, H:i' }}', done: true, icon: 'send', color: 'var(--color-primary)' },
+                
+                {% if booking.payment_at %}
+                { label: 'Payment Completed', time: '{{ booking.payment_at|date:'d M, H:i' }}', done: true, icon: 'credit-card', color: 'var(--color-primary)' },
+                {% else %}
+                { label: 'Payment Pending', time: 'Waiting', done: false, icon: 'credit-card', color: 'var(--color-border)' },
+                {% endif %}
+                
+                {% if booking.reschedule_status != 'none' or booking.suggested_date %}
+                    {% if booking.suggested_date %}
+                        {
+                            label: '{% if booking.reschedule_requested_by_customer %}Reschedule Requested by You{% elif booking.reschedule_requested_by_purohit %}Reschedule Requested by {{ booking.purohit.name|escapejs }}{% else %}Reschedule Requested{% endif %}',
+                            time: 'Requested on {% if booking.reschedule_requested_at %}{{ booking.reschedule_requested_at|date:"d M, H:i" }}{% else %}{{ booking.updated_at|date:"d M, H:i" }}{% endif %} | Suggested for {{ booking.suggested_date|date:"d M" }}{% if booking.suggested_time %} at {{ booking.suggested_time|time:"H:i" }}{% endif %}{% if booking.reschedule_status == "pending" and booking.reschedule_requested_by_customer %} · Waiting for purohit response{% elif booking.reschedule_status == "pending" and booking.reschedule_requested_by_purohit %} · Awaiting your response{% endif %}',
+                            done: true, icon: 'clock', color: '#F59E0B'
+                        },
+                    {% endif %}
+
+                    {% if booking.reschedule_status == 'accepted' %}
+                        {
+                            label: '{% if booking.reschedule_requested_by_customer %}Reschedule Accepted by {{ booking.purohit.name|escapejs }}{% else %}Reschedule Accepted by You{% endif %}',
+                            time: 'Accepted on {% if booking.reschedule_accepted_at %}{{ booking.reschedule_accepted_at|date:"d M, H:i" }}{% else %}{{ booking.updated_at|date:"d M, H:i" }}{% endif %} | Updated to {{ booking.event_date|date:"d M" }}{% if booking.event_time %} at {{ booking.event_time|time:"H:i" }}{% endif %}',
+                            done: true, icon: 'check-circle', color: '#10B981'
+                        },
+                    {% elif booking.reschedule_status == 'rejected' %}
+                        {
+                            label: '{% if booking.reschedule_requested_by_customer %}Reschedule Declined by {{ booking.purohit.name|escapejs }}{% else %}Reschedule Declined by You{% endif %}',
+                            time: 'Declined on {% if booking.reschedule_rejected_at %}{{ booking.reschedule_rejected_at|date:"d M, H:i" }}{% else %}{{ booking.updated_at|date:"d M, H:i" }}{% endif %}',
+                            done: true, icon: 'x-circle', color: '#EF4444'
+                        },
+                    {% endif %}
+                {% endif %}
+
+                {% if booking.status == 'cancelled' %}
+                { label: 'Booking Cancelled', time: 'Actioned on {{ booking.updated_at|date:'d M, H:i' }}', done: true, is_cancel: true, icon: 'slash', color: '#EF4444' },
+                {% else %}
+                    { 
+                        label: 'Purohit Confirmed', 
+                        time: '{% if booking.accepted_at %}Confirmed on {{ booking.accepted_at|date:'d M, H:i' }} | {{ booking.purohit.name|escapejs }} is ready{% else %}Waiting for Purohit to confirm{% endif %}', 
+                        done: {% if booking.accepted_at %}true{% else %}false{% endif %}, icon: 'check-square', color: 'var(--color-primary)' 
+                    },
+                    { 
+                        label: 'Ritual Started', 
+                        time: '{% if booking.started_at %}Started on {{ booking.started_at|date:'d M, H:i' }} | {{ booking.purohit.name|escapejs }} has begun the puja{% else %}Awaiting Start Code{% endif %}', 
+                        done: {% if booking.started_at %}true{% else %}false{% endif %}, icon: 'flame', color: '#8B5CF6' 
+                    },
+                    { 
+                        label: 'Ritual Completed', 
+                        time: '{% if booking.completed_at %}Completed on {{ booking.completed_at|date:'d M, H:i' }} | Ritual Performed Successfully{% else %}Finalizing puja...{% endif %}', 
+                        done: {% if booking.completed_at %}true{% else %}false{% endif %}, icon: 'sparkles', color: '#10B981' 
+                    }
+                {% endif %}
+            ]
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ]
+}" style="padding: var(--spacing-xl) var(--spacing-md);">
+    {% include 'dashboard/partials/devotee_live.html' %}
+    {% include 'dashboard/partials/devotee_travel_browse.html' %}
+
+        <!-- Sidebar Journey Tracker -->
+        <div x-show="timelineOpen" style="position: fixed; inset: 0; z-index: 3000; display: flex; justify-content: flex-end;" x-cloak>
+            <div @click="timelineOpen = false" style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);"></div>
+            <div x-show="timelineOpen" 
+                 x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="translateX(100%)" x-transition:enter-end="translateX(0)"
+                 x-transition:leave="transition ease-in duration-300 transform" x-transition:leave-start="translateX(0)" x-transition:leave-end="translateX(100%)"
+                 style="position: relative; width: 100%; max-width: 420px; background: var(--color-bg-card); height: 100%; box-shadow: var(--shadow-lg); padding: var(--spacing-xl); overflow-y: auto; border-left: 1px solid var(--color-border);">
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                    <h2 style="margin: 0; font-size: 1.5rem;">Journey Tracker</h2>
+                    <button @click="timelineOpen = false" style="background: none; border: none; cursor: pointer; color: var(--color-text-muted); font-size: 24px;">&times;</button>
+                </div>
+
+                <template x-if="activeBooking">
+                    <div>
+                        <div style="margin-bottom: 35px; background: rgba(var(--color-primary-rgb), 0.05); padding: 20px; border-radius: 16px; border: 1px solid var(--color-border);">
+                            <div style="color: var(--color-primary); font-weight: 700; font-size: 0.8rem; font-family: monospace; letter-spacing: 1px;" x-text="activeBooking.id"></div>
+                            <h3 x-text="activeBooking.puja" style="margin: 8px 0; font-size: 1.2rem;"></h3>
+                            <div style="font-size: 0.9rem; color: var(--color-text-muted);">Purohit: <span x-text="activeBooking.purohit" style="color: var(--color-text-main); font-weight: 600;"></span></div>
+                        </div>
+
+                        <div style="position: relative; padding-left: 45px;">
+                            <div :style="'position: absolute; left: 16px; top: 0; bottom: 0; width: 2px; background: ' + (activeBooking.status === 'cancelled' ? 'rgba(239, 68, 68, 0.2)' : 'var(--color-border)')"></div>
+                            
+                            <template x-for="(step, index) in activeBooking.steps" :key="index">
+                                <div style="position: relative; margin-bottom: 35px;">
+                                    <div :style="'position: absolute; left: -43px; top: 0; width: 32px; height: 32px; border-radius: 10px; background: ' + (step.done ? step.color : 'var(--color-bg-card)') + '; border: 2px solid ' + (step.done ? step.color : 'var(--color-border)') + '; z-index: 2; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px ' + (step.done ? 'rgba(0,0,0,0.1)' : 'transparent')">
+                                        <i x-show="step.done && !step.is_cancel" :data-lucide="step.icon" style="width: 16px; height: 16px; color: white;"></i>
+                                        <i x-show="step.is_cancel" data-lucide="x" style="width: 16px; height: 16px; color: white;"></i>
+                                    </div>
+                                    <div style="display: flex; flex-direction: column;">
+                                        <span :style="'font-weight: 700; font-size: 1.05rem; color: ' + (step.done ? (step.is_cancel ? '#EF4444' : 'var(--color-text-main)') : 'var(--color-text-muted)')" x-text="step.label"></span>
+                                        <span style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 6px; display: flex; align-items: center; gap: 6px;">
+                                            <i data-lucide="clock" style="width: 12px;"></i> <span x-text="step.time"></span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+</div>
+
+<script>
+    function confirmCancellation(bookingId) {
+        Swal.fire({
+            title: 'Cancel Booking?', text: 'Are you sure?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#EF4444', confirmButtonText: 'Yes, Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.createElement('form'); form.method = 'POST'; form.action = `/dashboard/booking/${bookingId}/cancel/`;
+                const csrf = document.createElement('input'); csrf.type = 'hidden'; csrf.name = 'csrfmiddlewaretoken'; csrf.value = '{{ csrf_token }}';
+                form.appendChild(csrf); document.body.appendChild(form); form.submit();
+            }
+        });
+    }
+    function confirmReschedule(booking) {
+        const currentWhen = booking.event_display || 'Not set';
+        const pujaName = booking.puja || 'this puja';
+        Swal.fire({
+            title: 'Request Reschedule',
+            width: 440,
+            padding: '1.5rem',
+            customClass: {
+                popup: 'reschedule-swal',
+                htmlContainer: 'reschedule-swal-body',
+                confirmButton: 'reschedule-swal-confirm',
+                cancelButton: 'reschedule-swal-cancel',
+                title: 'reschedule-swal-title'
+            },
+            html: `
+                <div class="rs-modal">
+                    <div class="rs-current">
+                        <div class="rs-current-label">Current schedule</div>
+                        <div class="rs-current-puja">${pujaName}</div>
+                        <div class="rs-current-when">${currentWhen}</div>
+                    </div>
+                    <div class="rs-field">
+                        <label for="swal-date">Suggest new date</label>
+                        <input type="date" id="swal-date" class="rs-input" value="${booking.event_date || ''}">
+                    </div>
+                    <div class="rs-field">
+                        <label for="swal-time">Suggest new time</label>
+                        <input type="time" id="swal-time" class="rs-input" value="${booking.event_time || ''}">
+                    </div>
+                    <div class="rs-field">
+                        <label for="swal-reason">Reason <span>(optional)</span></label>
+                        <input type="text" id="swal-reason" class="rs-input" placeholder="e.g. travel conflict" maxlength="255">
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            focusConfirm: false,
+            confirmButtonText: 'Send Request',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#D97706',
+            cancelButtonColor: '#334155',
+            preConfirm: () => {
+                const date = document.getElementById('swal-date').value;
+                const time = document.getElementById('swal-time').value;
+                const reason = document.getElementById('swal-reason').value.trim();
+                if (!date || !time) {
+                    Swal.showValidationMessage('Please select both a new date and time');
+                    return false;
+                }
+                if (date === booking.event_date && time === booking.event_time) {
+                    Swal.showValidationMessage('Choose a different date or time than the current schedule');
+                    return false;
+                }
+                return { date, time, reason };
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const bookingId = booking.id || booking.booking_id;
+                const form = document.createElement('form'); form.method = 'POST'; form.action = `/dashboard/booking/${bookingId}/reschedule/request/`;
+                const csrf = document.createElement('input'); csrf.type = 'hidden'; csrf.name = 'csrfmiddlewaretoken'; csrf.value = '{{ csrf_token }}'; form.appendChild(csrf);
+                const d = document.createElement('input'); d.type='hidden'; d.name='suggested_date'; d.value=result.value.date; form.appendChild(d);
+                const t = document.createElement('input'); t.type='hidden'; t.name='suggested_time'; t.value=result.value.time; form.appendChild(t);
+                const r = document.createElement('input'); r.type='hidden'; r.name='reason'; r.value=result.value.reason || ''; form.appendChild(r);
+                document.body.appendChild(form); form.submit();
+            }
+        });
+    }
+    function openReviewModal(bookingId, purohitName, existingRating = 5, existingTitle = '', existingComment = '') {
+        let selectedRating = existingRating;
+        
+        Swal.fire({
+            title: `<div style="font-family: 'Playfair Display', serif; font-size: 1.8rem; color: #FFD700; margin-bottom: 10px;">Share Your Blessings</div>`,
+            html: `
+                <div class="luxury-review-container">
+                    <p style="color: #A0AEC0; margin-bottom: 25px; font-size: 0.9rem;">How was your ritual experience with <strong>${purohitName}</strong>?</p>
+                    
+                    <div class="star-rating-wrapper">
+                        ${[1,2,3,4,5].map(num => `
+                            <span class="star-item ${num <= selectedRating ? 'active' : ''}" data-value="${num}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                </svg>
+                            </span>
+                        `).join('')}
+                    </div>
+                    <input type="hidden" id="swal-rating" value="${selectedRating}">
+                    
+                    <div class="input-group-modern">
+                        <label>Headline</label>
+                        <input type="text" id="swal-title" placeholder="Summarize in one word..." value="${existingTitle}">
+                    </div>
+                    
+                    <div class="input-group-modern">
+                        <label>Your Experience</label>
+                        <textarea id="swal-comment" placeholder="Tell us about the sacred atmosphere, the chanting, and your overall peace of mind...">${existingComment}</textarea>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: existingRating ? 'Update Review' : 'Submit Review',
+            background: '#1A202C',
+            customClass: {
+                popup: 'luxury-swal-popup',
+                confirmButton: 'luxury-confirm-btn',
+                cancelButton: 'luxury-cancel-btn'
+            },
+            didOpen: () => {
+                const stars = document.querySelectorAll('.star-item');
+                stars.forEach(star => {
+                    star.addEventListener('click', () => {
+                        const val = star.getAttribute('data-value');
+                        selectedRating = val;
+                        document.getElementById('swal-rating').value = val;
+                        stars.forEach(s => {
+                            if (s.getAttribute('data-value') <= val) s.classList.add('active');
+                            else s.classList.remove('active');
+                        });
+                    });
+                    star.addEventListener('mouseenter', () => {
+                        const val = star.getAttribute('data-value');
+                        stars.forEach(s => {
+                            if (s.getAttribute('data-value') <= val) s.style.transform = 'scale(1.2)';
+                        });
+                    });
+                    star.addEventListener('mouseleave', () => {
+                        stars.forEach(s => s.style.transform = '');
+                    });
+                });
+            },
+            preConfirm: () => {
+                const rating = document.getElementById('swal-rating').value;
+                const title = document.getElementById('swal-title').value;
+                const comment = document.getElementById('swal-comment').value;
+                if (!title || !comment) {
+                    Swal.showValidationMessage('Please share a title and comment');
+                }
+                return { rating, title, comment }
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const formData = new FormData();
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                Object.keys(result.value).forEach(key => formData.append(key, result.value[key]));
+
+                fetch(`/reviews/write/${bookingId}/`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        const ask = document.querySelector('.ph-review-ask');
+                        if (ask) ask.remove();
+                        Swal.fire({ title: 'Blessings Received!', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+                        
+                        // Hide the "Rate & Review" button if it exists
+                        const triggerBtn = document.querySelector(`[data-booking-id="${bookingId}"] .review-trigger-btn`);
+                        if (triggerBtn) triggerBtn.remove();
+                        
+                        // Update the UI instantly
+                        const reviewBox = document.querySelector(`[data-booking-id="${bookingId}"] .review-container`);
+                        if (reviewBox) {
+                            let starsHtml = '';
+                            const given = Number(result.value.rating) || 0;
+                            for (let i = 1; i <= 5; i++) {
+                                const on = i <= given;
+                                starsHtml += `<svg class="ph-star${on ? ' is-on' : ''}" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="${on ? '#F59E0B' : 'none'}" stroke="${on ? '#F59E0B' : '#D6D3D1'}" stroke-width="1.6" stroke-linejoin="round"></path></svg>`;
+                            }
+                            reviewBox.classList.add('ph-review');
+                            reviewBox.innerHTML = `
+                                <div class="ph-review-rating">
+                                    <div class="ph-stars" role="img" aria-label="${given} out of 5 stars">${starsHtml}</div>
+                                    <button type="button" class="ph-review-edit" onclick="openReviewModal('${bookingId}', '${purohitName}', ${given}, '${result.value.title.replace(/'/g, "\\'")}', '${result.value.comment.replace(/'/g, "\\'")}')">
+                                        <i data-lucide="edit-3"></i>
+                                    </button>
+                                </div>
+                                <p>“${result.value.comment.substring(0, 160)}${result.value.comment.length > 160 ? '…' : ''}”</p>
+                            `;
+                            if (window.lucide) lucide.createIcons();
+                        } else {
+                            // If it was the first time, we might need to reload or find a spot to inject
+                            window.location.reload(); 
+                        }
+                    } else {
+                        Swal.fire('Error', 'Could not save review. Please try again.', 'error');
+                    }
+                });
+            }
+        });
+    }
+    function maybeAskReview() {
+        const ask = document.querySelector('.ph-review-ask');
+        if (!ask || typeof openReviewModal !== 'function') return;
+        const bookingId = ask.getAttribute('data-review-booking');
+        const purohitName = ask.getAttribute('data-review-purohit') || '';
+        if (!bookingId) return;
+        const storageKey = "pc-review-asked-" + bookingId;
+        if (sessionStorage.getItem(storageKey)) return;
+        sessionStorage.setItem(storageKey, "1");
+        setTimeout(function () {
+            openReviewModal(bookingId, purohitName);
+        }, 500);
+    }
+    document.addEventListener('DOMContentLoaded', maybeAskReview);
+    document.body.addEventListener('htmx:afterSwap', function (event) {
+        if (!event.detail || !event.detail.target || event.detail.target.id !== 'devotee-live-root') return;
+        if (window.lucide) lucide.createIcons();
+        maybeAskReview();
+    });
+    (function watchDevoteeLive() {
+        const pulseUrl = "{% url 'dashboard:live_pulse' %}";
+        let fingerprint = "{{ live_fingerprint|escapejs }}";
+        let refreshWhenClear = false;
+        function modalOpen() {
+            return Boolean(window.Swal && typeof Swal.isVisible === 'function' && Swal.isVisible());
+        }
+        function refreshLivePanel() {
+            if (document.hidden) return;
+            if (modalOpen()) {
+                refreshWhenClear = true;
+                return;
+            }
+            refreshWhenClear = false;
+            document.body.dispatchEvent(new Event('devotee-refresh'));
+        }
+        async function tick() {
+            if (document.hidden) return;
+            if (refreshWhenClear && !modalOpen()) {
+                refreshLivePanel();
+                return;
+            }
+            try {
+                const response = await fetch(pulseUrl, { headers: { 'Accept': 'application/json' } });
+                if (!response.ok) return;
+                const data = await response.json();
+                if (data.fingerprint && data.fingerprint !== fingerprint) {
+                    fingerprint = data.fingerprint;
+                    refreshLivePanel();
+                }
+            } catch (error) {}
+        }
+        setInterval(tick, 4000);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) tick();
+        });
+    })();
+</script>
+
+<style>
+    [x-cloak] { display: none !important; }
+    @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
+    .pulse-dot { animation: pulse 2s infinite; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Luxury Review Modal Styles */
+    .luxury-swal-popup { border-radius: 32px !important; padding: 40px !important; border: 1px solid rgba(255, 215, 0, 0.1); }
+    .luxury-review-container { text-align: center; }
+    .star-rating-wrapper { display: flex; justify-content: center; gap: 12px; margin-bottom: 30px; }
+    .star-item { cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); color: #4A5568; }
+    .star-item svg { width: 42px; height: 42px; }
+    .star-item.active { color: #FFD700; filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.4)); }
+    .star-item.active svg { fill: #FFD700; }
+    .input-group-modern { text-align: left; margin-bottom: 20px; }
+    .input-group-modern label { display: block; font-size: 0.75rem; font-weight: 800; color: #718096; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; margin-left: 4px; }
+    .input-group-modern input, .input-group-modern textarea { width: 100%; background: #2D3748; border: 1px solid #4A5568; border-radius: 16px; padding: 14px 18px; color: white; font-family: 'Outfit', sans-serif; transition: all 0.3s; }
+    .input-group-modern input:focus, .input-group-modern textarea:focus { outline: none; border-color: #FFD700; box-shadow: 0 0 0 4px rgba(255, 215, 0, 0.1); background: #1A202C; }
+    .input-group-modern textarea { height: 120px; resize: none; }
+    .luxury-confirm-btn { background: linear-gradient(135deg, #FFD700 0%, #B8860B 100%) !important; color: #000 !important; font-weight: 800 !important; border-radius: 14px !important; padding: 12px 30px !important; text-transform: uppercase; letter-spacing: 1px; border: none !important; box-shadow: 0 10px 20px rgba(184, 134, 11, 0.3) !important; }
+    .luxury-cancel-btn { background: transparent !important; color: #718096 !important; font-weight: 600 !important; }
+</style>
+{% endblock %}

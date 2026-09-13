@@ -1,0 +1,4 @@
+{% with coverage=purohit.get_coverage_summary %}
+{% if coverage.visit_labels %}<p class="pc-coverage-note">Visiting {{ coverage.visit_labels|join:", " }}</p>{% endif %}
+{% if coverage.accepts_travel_requests %}<p class="pc-coverage-note">Open to travel requests</p>{% endif %}
+{% endwith %}

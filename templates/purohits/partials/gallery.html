@@ -1,0 +1,27 @@
+<div>
+    <h2 style="margin-bottom: var(--spacing-md);">Past pujas &amp; moments</h2>
+    <p style="color: var(--color-text-muted); margin: 0 0 var(--spacing-lg);">Photos and videos shared by {{ purohit.name }}.</p>
+    {% if gallery %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--spacing-md);">
+        {% for item in gallery %}
+        <div class="card" style="padding: 0; overflow: hidden;">
+            <div style="aspect-ratio: 4/3; background: #0b1020;">
+                {% if item.media_type == 'video' %}
+                <video src="{{ item.file.url }}" controls style="width: 100%; height: 100%; object-fit: cover;"></video>
+                {% else %}
+                <img src="{{ item.file.url }}" alt="{{ item.title|default:'Puja photo' }}" style="width: 100%; height: 100%; object-fit: cover;">
+                {% endif %}
+            </div>
+            <div style="padding: 10px 12px;">
+                <div style="font-weight: 700; font-size: 0.9rem;">{{ item.title|default:item.get_media_type_display }}</div>
+                {% if item.caption %}<div style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 2px;">{{ item.caption }}</div>{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card" style="text-align: center; color: var(--color-text-muted);">
+        No gallery items yet. This purohit has not uploaded past puja photos or videos.
+    </div>
+    {% endif %}
+</div>

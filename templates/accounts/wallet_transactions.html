@@ -1,0 +1,364 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Transaction History - PurohitConnect{% endblock %}
+
+{% block extra_head %}
+<style>
+    .pc-tx-page {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: var(--spacing-xl) var(--spacing-md) var(--spacing-2xl);
+    }
+    .pc-tx-hero {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+    .pc-tx-kicker {
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--color-primary);
+        margin-bottom: 6px;
+    }
+    .pc-tx-hero h1 {
+        margin: 0 0 6px;
+        font-size: 1.8rem;
+    }
+    .pc-tx-hero p {
+        margin: 0;
+        color: var(--color-text-muted);
+        font-size: 0.95rem;
+    }
+    .pc-tx-balance {
+        padding: 12px 18px;
+        border-radius: 16px;
+        border: 1px solid var(--color-border);
+        background: var(--color-bg-card);
+        text-align: right;
+        min-width: 160px;
+    }
+    .pc-tx-balance span {
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+        margin-bottom: 4px;
+    }
+    .pc-tx-balance strong {
+        font-size: 1.4rem;
+        color: var(--color-primary);
+    }
+    .pc-tx-filters {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 12px;
+        align-items: end;
+        margin-bottom: 18px;
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid var(--color-border);
+        background: var(--color-bg-card);
+    }
+    .pc-tx-field label {
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+        margin-bottom: 6px;
+    }
+    .pc-tx-field select,
+    .pc-tx-field input {
+        width: 100%;
+        min-height: 44px;
+        padding: 10px 12px;
+        font: inherit;
+        color: var(--color-text-main);
+        background: var(--color-bg-main);
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+    }
+    .pc-tx-filter-btn {
+        width: 100%;
+        min-height: 44px;
+        padding: 10px 14px;
+        font-weight: 700;
+    }
+    .pc-tx-clear {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin: -4px 0 16px;
+        font-size: 0.85rem;
+        color: var(--color-text-muted);
+    }
+    .pc-tx-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .pc-tx-head,
+    .pc-tx-row {
+        display: grid;
+        grid-template-columns: 140px 100px minmax(140px, 1.1fr) 130px minmax(0, 1.4fr) 110px;
+        gap: 12px;
+        align-items: center;
+    }
+    .pc-tx-head {
+        padding: 0 16px 8px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+    }
+    .pc-tx-row {
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid var(--color-border);
+        background: var(--color-bg-card);
+    }
+    .pc-tx-date {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+    .pc-tx-date strong {
+        font-size: 0.92rem;
+    }
+    .pc-tx-date span {
+        font-size: 0.78rem;
+        color: var(--color-text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+    .pc-tx-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: fit-content;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 800;
+    }
+    .pc-tx-pill.is-credit { background: rgba(16, 185, 129, 0.14); color: #6ee7b7; }
+    .pc-tx-pill.is-debit { background: rgba(239, 68, 68, 0.14); color: #fca5a5; }
+    .pc-tx-pill.is-done { background: rgba(16, 185, 129, 0.14); color: #6ee7b7; }
+    .pc-tx-pill.is-pending { background: rgba(245, 158, 11, 0.16); color: #fcd34d; }
+    .pc-tx-pill.is-failed { background: rgba(239, 68, 68, 0.14); color: #fca5a5; }
+    [data-theme="light"] .pc-tx-pill.is-credit,
+    [data-theme="light"] .pc-tx-pill.is-done { color: #047857; }
+    [data-theme="light"] .pc-tx-pill.is-debit,
+    [data-theme="light"] .pc-tx-pill.is-failed { color: #b91c1c; }
+    [data-theme="light"] .pc-tx-pill.is-pending { color: #b45309; }
+    .pc-tx-reason {
+        min-width: 0;
+        font-weight: 600;
+    }
+    .pc-tx-amount {
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+    .pc-tx-amount.is-credit { color: #34d399; }
+    .pc-tx-amount.is-debit { color: #f87171; }
+    [data-theme="light"] .pc-tx-amount.is-credit { color: #047857; }
+    [data-theme="light"] .pc-tx-amount.is-debit { color: #b91c1c; }
+    .pc-tx-ref {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.78rem;
+        color: var(--color-text-muted);
+    }
+    .pc-tx-status { justify-self: start; }
+    .pc-tx-empty {
+        text-align: center;
+        padding: 48px 20px;
+        border: 1px dashed var(--color-border);
+        border-radius: 18px;
+        color: var(--color-text-muted);
+    }
+    .pc-tx-empty h3 { margin: 10px 0 6px; color: var(--color-text-main); }
+    .pc-tx-pager {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 18px;
+        color: var(--color-text-muted);
+        font-size: 0.85rem;
+    }
+    .pc-tx-pager-links {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .pc-tx-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 18px;
+    }
+    @media (max-width: 900px) {
+        .pc-tx-filters { grid-template-columns: 1fr 1fr; }
+        .pc-tx-head { display: none; }
+        .pc-tx-row {
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 14px;
+        }
+        .pc-tx-date { grid-column: 1; }
+        .pc-tx-amount { grid-column: 2; justify-self: end; text-align: right; }
+        .pc-tx-type { grid-column: 1; }
+        .pc-tx-status { grid-column: 2; justify-self: end; }
+        .pc-tx-reason, .pc-tx-ref { grid-column: 1 / -1; }
+        .pc-tx-ref { white-space: normal; word-break: break-all; }
+    }
+    @media (max-width: 560px) {
+        .pc-tx-filters { grid-template-columns: 1fr; }
+        .pc-tx-hero { align-items: flex-start; }
+        .pc-tx-balance { text-align: left; width: 100%; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pc-tx-page">
+    {% include 'accounts/partials/wallet_nav.html' %}
+    <div class="pc-tx-hero">
+        <div>
+            <div class="pc-tx-kicker">Wallet</div>
+            <h1>Transaction History</h1>
+            <p>Credits, booking payments, and top-ups in one readable list.</p>
+        </div>
+        <div class="pc-tx-balance">
+            <span>Balance</span>
+            <strong>₹{{ wallet_balance|floatformat:2 }}</strong>
+        </div>
+    </div>
+
+    <form method="get" class="pc-tx-filters">
+        <div class="pc-tx-field">
+            <label for="type_filter">Type</label>
+            <select name="type" id="type_filter">
+                <option value="">All types</option>
+                {% for value, display in transaction_types %}
+                <option value="{{ value }}" {% if filters.type == value %}selected{% endif %}>{{ display }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="pc-tx-field">
+            <label for="reason_filter">Reason</label>
+            <select name="reason" id="reason_filter">
+                <option value="">All reasons</option>
+                {% for value, display in transaction_reasons %}
+                <option value="{{ value }}" {% if filters.reason == value %}selected{% endif %}>{{ display }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="pc-tx-field">
+            <label for="status_filter">Status</label>
+            <select name="status" id="status_filter">
+                <option value="">All status</option>
+                {% for value, display in status_choices %}
+                <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ display }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="pc-tx-field">
+            <label for="date_from">From</label>
+            <input type="date" name="date_from" id="date_from" value="{{ filters.date_from }}">
+        </div>
+        <div class="pc-tx-field">
+            <label for="date_to">To</label>
+            <input type="date" name="date_to" id="date_to" value="{{ filters.date_to }}">
+        </div>
+        <button type="submit" class="btn btn-primary pc-tx-filter-btn">Apply filters</button>
+    </form>
+
+    {% if request.GET.type or request.GET.reason or request.GET.status or request.GET.date_from or request.GET.date_to %}
+    <a href="{% url 'accounts:wallet_transactions' %}" class="pc-tx-clear">Clear filters</a>
+    {% endif %}
+
+    {% if page_obj %}
+    <div class="pc-tx-head" aria-hidden="true">
+        <div>Date</div>
+        <div>Type</div>
+        <div>Reason</div>
+        <div>Amount</div>
+        <div>Reference</div>
+        <div>Status</div>
+    </div>
+    <div class="pc-tx-list">
+        {% for transaction in page_obj %}
+        <article class="pc-tx-row">
+            <div class="pc-tx-date">
+                <strong>{{ transaction.created_at|date:"d M Y" }}</strong>
+                <span>{{ transaction.created_at|date:"H:i" }}</span>
+            </div>
+            <div class="pc-tx-type">
+                {% if transaction.transaction_type == 'credit' %}
+                <span class="pc-tx-pill is-credit">Credit</span>
+                {% else %}
+                <span class="pc-tx-pill is-debit">Debit</span>
+                {% endif %}
+            </div>
+            <div class="pc-tx-reason">{{ transaction.get_reason_display }}</div>
+            <div class="pc-tx-amount {% if transaction.transaction_type == 'credit' %}is-credit{% else %}is-debit{% endif %}">
+                {% if transaction.transaction_type == 'credit' %}+{% else %}−{% endif %}₹{{ transaction.amount|floatformat:2 }}
+            </div>
+            <div class="pc-tx-ref" title="{{ transaction.reference|default:'-' }}">{{ transaction.reference|default:"—" }}</div>
+            <div class="pc-tx-status">
+                {% if transaction.status == 'completed' %}
+                <span class="pc-tx-pill is-done">Completed</span>
+                {% elif transaction.status == 'pending' %}
+                <span class="pc-tx-pill is-pending">Pending</span>
+                {% else %}
+                <span class="pc-tx-pill is-failed">{{ transaction.status|title }}</span>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+
+    <div class="pc-tx-pager">
+        <div>Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</div>
+        {% if page_obj.has_other_pages %}
+        <div class="pc-tx-pager-links">
+            {% if page_obj.has_previous %}
+            <a class="btn btn-outline" href="?page={{ page_obj.previous_page_number }}{% if filter_query %}&{{ filter_query }}{% endif %}">Previous</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a class="btn btn-outline" href="?page={{ page_obj.next_page_number }}{% if filter_query %}&{{ filter_query }}{% endif %}">Next</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="pc-tx-empty">
+        <i data-lucide="inbox" style="width: 36px; height: 36px;"></i>
+        <h3>No transactions found</h3>
+        <p>Wallet activity will show up here after a top-up or booking payment.</p>
+        <a href="{% url 'accounts:wallet_topup' %}" class="btn btn-primary" style="margin-top: 12px;">Add money</a>
+    </div>
+    {% endif %}
+
+    <a href="{% url 'accounts:wallet_dashboard' %}" class="btn btn-outline pc-tx-back">
+        <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+        Back to wallet
+    </a>
+</div>
+{% endblock %}

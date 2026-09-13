@@ -1,0 +1,28 @@
+<div id="offered-packages">
+    {% if focus_package %}
+        <h2 style="margin-bottom: var(--spacing-sm);">Your ritual</h2>
+        <p style="color: var(--color-text-muted); margin: 0 0 var(--spacing-lg);">Already selected from Browse Pujas. Change it only if you want a different offering.</p>
+        <div style="display: flex; flex-direction: column; gap: var(--spacing-md);">
+            {% include 'purohits/partials/package_card.html' with package=focus_package is_focus=True %}
+        </div>
+        {% if other_packages %}
+        <h3 style="margin: var(--spacing-xl) 0 var(--spacing-md);">Also offered by this purohit</h3>
+        <div style="display: flex; flex-direction: column; gap: var(--spacing-md);">
+            {% for package in other_packages %}
+                {% include 'purohits/partials/package_card.html' with package=package is_focus=False %}
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% else %}
+        <h2 style="margin-bottom: var(--spacing-lg);">Puja Packages Offered</h2>
+        <div style="display: flex; flex-direction: column; gap: var(--spacing-md);">
+            {% for package in packages %}
+                {% include 'purohits/partials/package_card.html' with package=package is_focus=False %}
+            {% empty %}
+            <div class="card" style="text-align: center; padding: var(--spacing-2xl);">
+                <p style="color: var(--color-text-muted);">No specific packages listed yet. Please contact for details.</p>
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>

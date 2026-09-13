@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+
+{% block title %}Payment Analytics | Admin Dashboard{% endblock %}
+
+{% block extra_head %}
+<style>
+    .analytics-shell [style*="background: #f1f1f1"] {
+        background: rgba(148, 163, 184, 0.15) !important;
+    }
+    .stat-card {
+        background: var(--color-bg-main);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-lg);
+        text-align: center;
+    }
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--color-primary);
+        margin-bottom: 0.5rem;
+    }
+    .stat-label {
+        font-size: 0.9rem;
+        color: var(--color-text-muted);
+        text-transform: uppercase;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container analytics-shell" style="padding: var(--spacing-xl) var(--spacing-md);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xl);">
+        <div>
+            <h1>Payment Analytics</h1>
+            <p style="color: var(--color-text-muted);">Monitor wallet transactions, payments, and revenue metrics.</p>
+        </div>
+        <div class="card" style="padding: 0.5rem 1.5rem; background: var(--color-bg-main); border: 1px solid var(--color-primary); text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase;">Total Wallet Balance</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-primary);">₹{{ total_wallet_balance|floatformat:2 }}</div>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md); margin-bottom: var(--spacing-xl);">
+        <div class="stat-card">
+            <div class="stat-value">{{ transaction_stats.total_count }}</div>
+            <div class="stat-label">Total Transactions</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">₹{{ amount_stats.total_credited|floatformat:2 }}</div>
+            <div class="stat-label">Total Credited</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">₹{{ amount_stats.total_debited|floatformat:2 }}</div>
+            <div class="stat-label">Total Debited</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ booking_payment_stats.total_bookings }}</div>
+            <div class="stat-label">Total Bookings</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">₹{{ booking_payment_stats.total_revenue|floatformat:2 }}</div>
+            <div class="stat-label">Booking Revenue</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ recent_activity.recent_count }}</div>
+            <div class="stat-label">Transactions (7 days)</div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg);">
+        <!-- Transaction Breakdown -->
+        <div class="card">
+            <div style="border-bottom: 1px solid var(--color-border); padding-bottom: var(--spacing-md); margin-bottom: var(--spacing-md);">
+                <h3>Transaction Breakdown</h3>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+                <div>
+                    <h4 style="color: var(--color-success);">Credits</h4>
+                    <p style="font-size: 1.5rem; font-weight: 700; margin: 0;">{{ transaction_stats.credit_count }}</p>
+                    <p style="font-size: 0.9rem; color: var(--color-text-muted);">₹{{ amount_stats.total_credited|floatformat:2 }}</p>
+                </div>
+                <div>
+                    <h4 style="color: var(--color-danger);">Debits</h4>
+                    <p style="font-size: 1.5rem; font-weight: 700; margin: 0;">{{ transaction_stats.debit_count }}</p>
+                    <p style="font-size: 0.9rem; color: var(--color-text-muted);">₹{{ amount_stats.total_debited|floatformat:2 }}</p>
+                </div>
+                <div>
+                    <h4 style="color: var(--color-success);">Completed</h4>
+                    <p style="font-size: 1.5rem; font-weight: 700; margin: 0;">{{ transaction_stats.completed_count }}</p>
+                </div>
+                <div>
+                    <h4 style="color: var(--color-warning);">Pending</h4>
+                    <p style="font-size: 1.5rem; font-weight: 700; margin: 0;">{{ transaction_stats.pending_count }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction Reasons -->
+        <div class="card">
+            <div style="border-bottom: 1px solid var(--color-border); padding-bottom: var(--spacing-md); margin-bottom: var(--spacing-md);">
+                <h3>Transaction Types</h3>
+            </div>
+            <div style="max-height: 300px; overflow-y: auto;">
+                {% for reason in reason_stats %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--color-border-light);">
+                        <div>
+                            <div style="font-weight: 600;">{{ reason.reason|title }}</div>
+                            <div style="font-size: 0.8rem; color: var(--color-text-muted);">{{ reason.count }} transactions</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-weight: 700;">₹{{ reason.total_amount|floatformat:2 }}</div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div style="margin-top: var(--spacing-xl);">
+        <h3>Recent Transactions</h3>
+        <div class="card" style="margin-top: var(--spacing-md);">
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--color-border);">
+                            <th style="padding: var(--spacing-sm); text-align: left;">Date</th>
+                            <th style="padding: var(--spacing-sm); text-align: left;">User</th>
+                            <th style="padding: var(--spacing-sm); text-align: left;">Type</th>
+                            <th style="padding: var(--spacing-sm); text-align: left;">Reason</th>
+                            <th style="padding: var(--spacing-sm); text-align: right;">Amount</th>
+                            <th style="padding: var(--spacing-sm); text-align: left;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in recent_transactions %}
+                            <tr style="border-bottom: 1px solid var(--color-border-light);">
+                                <td style="padding: var(--spacing-sm);">{{ transaction.created_at|date:"M d, H:i" }}</td>
+                                <td style="padding: var(--spacing-sm);">{{ transaction.user.get_full_name|default:transaction.user.username }}</td>
+                                <td style="padding: var(--spacing-sm);">
+                                    <span style="background: {% if transaction.transaction_type == 'credit' %}#E8F5E9{% else %}#FFEBEE{% endif %}; 
+                                          color: {% if transaction.transaction_type == 'credit' %}#2E7D32{% else %}#C62828{% endif %}; 
+                                          padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">
+                                        {{ transaction.transaction_type|title }}
+                                    </span>
+                                </td>
+                                <td style="padding: var(--spacing-sm);">{{ transaction.get_reason_display }}</td>
+                                <td style="padding: var(--spacing-sm); text-align: right; font-weight: 600;">
+                                    {% if transaction.transaction_type == 'credit' %}
+                                        <span style="color: var(--color-success);">+₹{{ transaction.amount|floatformat:2 }}</span>
+                                    {% else %}
+                                        <span style="color: var(--color-danger);">-₹{{ transaction.amount|floatformat:2 }}</span>
+                                    {% endif %}
+                                </td>
+                                <td style="padding: var(--spacing-sm);">
+                                    <span style="background: {% if transaction.status == 'completed' %}#E8F5E9{% elif transaction.status == 'pending' %}#FFF3E0{% else %}#FFEBEE{% endif %}; 
+                                          color: {% if transaction.status == 'completed' %}#2E7D32{% elif transaction.status == 'pending' %}#E65100{% else %}#C62828{% endif %}; 
+                                          padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">
+                                        {{ transaction.status|title }}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Paid Bookings -->
+    <div style="margin-top: var(--spacing-xl);">
+        <h3>Recent Paid Bookings (Last 7 Days)</h3>
+        <div class="card" style="margin-top: var(--spacing-md);">
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--color-border);">
+                            <th style="padding: var(--spacing-sm); text-align: left;">Booking ID</th>
+                            <th style="padding: var(--spacing-sm); text-align: left;">Customer</th>
+                            <th style="padding: var(--spacing-sm); text-align: left;">Purohit</th>
+                            <th style="padding: var(--spacing-sm); text-align: left;">Service</th>
+                            <th style="padding: var(--spacing-sm); text-align: right;">Amount</th>
+                            <th style="padding: var(--spacing-sm); text-align: left;">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for booking in recent_paid_bookings %}
+                            <tr style="border-bottom: 1px solid var(--color-border-light);">
+                                <td style="padding: var(--spacing-sm);">{{ booking.booking_id }}</td>
+                                <td style="padding: var(--spacing-sm);">{{ booking.customer.get_full_name|default:booking.customer.username }}</td>
+                                <td style="padding: var(--spacing-sm);">{{ booking.purohit.name }}</td>
+                                <td style="padding: var(--spacing-sm);">{{ booking.puja.name }}</td>
+                                <td style="padding: var(--spacing-sm); text-align: right; font-weight: 600;">₹{{ booking.total_amount|floatformat:2 }}</td>
+                                <td style="padding: var(--spacing-sm);">{{ booking.created_at|date:"M d, H:i" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

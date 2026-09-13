@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Wallet Dashboard - PurohitConnect{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    {% include 'accounts/partials/wallet_nav.html' %}
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-wallet"></i> My Wallet</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Wallet Balance Card -->
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h2 class="mb-0">₹{{ wallet_balance }}</h2>
+                                    <p class="mb-0">Current Balance</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <a href="{% url 'accounts:wallet_topup' %}" class="btn btn-success btn-lg w-100">
+                                <i class="fas fa-plus-circle"></i> Add Money
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="{% url 'accounts:wallet_transactions' %}" class="btn btn-outline-primary btn-lg w-100">
+                                <i class="fas fa-history"></i> Transaction History
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Wallet Statistics -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="text-success">₹{{ total_credited }}</h5>
+                                    <small class="text-muted">Total Added</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="text-danger">₹{{ total_debited }}</h5>
+                                    <small class="text-muted">Total Spent</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="text-info">{{ transaction_count }}</h5>
+                                    <small class="text-muted">Transactions</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h5 class="mb-3">Recent Transactions</h5>
+                    {% if recent_transactions %}
+                        <div style="display:flex;flex-direction:column;gap:10px;">
+                            {% for transaction in recent_transactions %}
+                            <div style="display:grid;grid-template-columns:1fr auto;gap:8px 16px;padding:12px 14px;border:1px solid var(--color-border);border-radius:14px;align-items:center;">
+                                <div>
+                                    <div style="font-weight:700;">{{ transaction.get_reason_display }}</div>
+                                    <div style="font-size:0.8rem;color:var(--color-text-muted);margin-top:2px;">
+                                        {{ transaction.created_at|date:"d M Y, H:i" }}
+                                        · {{ transaction.transaction_type|title }}
+                                        · {{ transaction.status|title }}
+                                    </div>
+                                </div>
+                                <div style="font-weight:800;white-space:nowrap;color:{% if transaction.transaction_type == 'credit' %}#34d399{% else %}#f87171{% endif %};">
+                                    {% if transaction.transaction_type == 'credit' %}+{% else %}−{% endif %}₹{{ transaction.amount|floatformat:2 }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{% url 'accounts:wallet_transactions' %}" class="btn btn-outline-primary">
+                                View All Transactions
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="text-center text-muted">
+                            <p>No transactions yet. <a href="{% url 'accounts:wallet_topup' %}">Add money</a> to get started!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

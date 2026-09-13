@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+    .hero {
+        border-bottom: 1px solid rgba(250, 204, 21, 0.25);
+        box-shadow: 0 24px 50px rgba(0, 0, 0, 0.3);
+    }
+    .search-box {
+        border: 1px solid rgba(250, 204, 21, 0.25);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="container">
+        <h1>Sacred Ceremonies, Simplified.</h1>
+        <p>Book verified, experienced Purohits & Pandits for your household pujas, festivals, and life events.</p>
+        
+        <form action="{% url 'pujas:list' %}" method="GET" class="search-box">
+            <input type="text" name="q" class="search-input" placeholder="Search pujas, e.g. Satyanarayan Puja..." />
+            <button type="submit" class="btn btn-primary search-btn">Search</button>
+        </form>
+        
+        <div style="margin-top: 2rem; display: flex; justify-content: center; gap: 2rem; opacity: 0.9;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="check-circle"></i>
+                <span>Verified Profiles</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="indian-rupee"></i>
+                <span>Transparent Pricing</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="calendar-check"></i>
+                <span>Instant Booking</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="container" style="margin-bottom: var(--spacing-2xl);">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: var(--spacing-xl);">
+        <div>
+            <h2>Popular Categories</h2>
+            <p style="color: var(--color-text-muted);">Find the right rituals for your occasion.</p>
+        </div>
+        <a href="{% url 'pujas:list' %}">View all pujas <i data-lucide="arrow-right" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;"></i></a>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: var(--spacing-lg);">
+        <a href="{% url 'pujas:list' %}?category=household-pujas" class="card" style="text-align: center; display: block;">
+            <div style="width: 64px; height: 64px; background: rgba(255, 153, 51, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--spacing-md); color: var(--color-primary);">
+                <i data-lucide="home" style="width: 32px; height: 32px;"></i>
+            </div>
+            <h3>Household Pujas</h3>
+            <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Vastu Shanti, Satyanarayan Puja, Griha Pravesh</p>
+        </a>
+        
+        <a href="{% url 'pujas:list' %}?category=life-events" class="card" style="text-align: center; display: block;">
+            <div style="width: 64px; height: 64px; background: rgba(255, 153, 51, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--spacing-md); color: var(--color-primary);">
+                <i data-lucide="baby" style="width: 32px; height: 32px;"></i>
+            </div>
+            <h3>Life Events</h3>
+            <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Namkaran, Annaprasana, Upanayanam</p>
+        </a>
+        
+        <a href="{% url 'pujas:list' %}?category=weddings" class="card" style="text-align: center; display: block;">
+            <div style="width: 64px; height: 64px; background: rgba(255, 153, 51, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--spacing-md); color: var(--color-primary);">
+                <i data-lucide="heart-handshake" style="width: 32px; height: 32px;"></i>
+            </div>
+            <h3>Weddings</h3>
+            <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Engagement, Vivah, Post-wedding rituals</p>
+        </a>
+        
+        <a href="{% url 'pujas:list' %}?category=special-rituals" class="card" style="text-align: center; display: block;">
+            <div style="width: 64px; height: 64px; background: rgba(255, 153, 51, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--spacing-md); color: var(--color-primary);">
+                <i data-lucide="sparkles" style="width: 32px; height: 32px;"></i>
+            </div>
+            <h3>Special Rituals</h3>
+            <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Navagraha Shanti, Havan, Yagna</p>
+        </a>
+    </div>
+</section>
+
+<section style="background-color: var(--color-bg-card); padding: var(--spacing-2xl) 0; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); margin-bottom: var(--spacing-2xl);">
+    <div class="container">
+        <div style="text-align: center; margin-bottom: var(--spacing-xl);">
+            <h2>How It Works</h2>
+            <p style="color: var(--color-text-muted);">Your sacred journey in 3 simple steps</p>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--spacing-xl); text-align: center;">
+            <div>
+                <div style="width: 80px; height: 80px; background: var(--color-bg-main); border: 2px solid var(--color-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--spacing-md); color: var(--color-primary); font-size: 1.5rem; font-weight: bold;">1</div>
+                <h3>Search</h3>
+                <p style="color: var(--color-text-muted); margin-top: 0.5rem;">Search for the puja you need, then choose a verified purohit.</p>
+            </div>
+            <div>
+                <div style="width: 80px; height: 80px; background: var(--color-bg-main); border: 2px solid var(--color-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--spacing-md); color: var(--color-primary); font-size: 1.5rem; font-weight: bold;">2</div>
+                <h3>Choose & Book</h3>
+                <p style="color: var(--color-text-muted); margin-top: 0.5rem;">Review verified purohit profiles, prices, and book your slot.</p>
+            </div>
+            <div>
+                <div style="width: 80px; height: 80px; background: var(--color-bg-main); border: 2px solid var(--color-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--spacing-md); color: var(--color-primary); font-size: 1.5rem; font-weight: bold;">3</div>
+                <h3>Perform Puja</h3>
+                <p style="color: var(--color-text-muted); margin-top: 0.5rem;">The Purohit arrives on time to conduct the authentic ritual.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="container" style="margin-bottom: var(--spacing-2xl);">
+    <div style="background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%); border-radius: var(--radius-lg); padding: var(--spacing-xl) var(--spacing-2xl); color: white; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--spacing-lg);">
+        <div>
+            <h2 style="color: white;">Are you a Purohit or Pandit?</h2>
+            <p style="opacity: 0.9; margin-top: 0.5rem; max-width: 600px;">Join our platform to connect with devotees across your city. Manage your bookings, build your digital profile, and focus on what you do best.</p>
+        </div>
+        <a href="{% url 'accounts:signup' %}" class="btn btn-secondary" style="background-color: white; color: var(--color-primary);">Register as Purohit</a>
+    </div>
+</section>
+{% endblock %}

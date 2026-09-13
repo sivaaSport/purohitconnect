@@ -1,0 +1,74 @@
+    <section id="travel-requests" class="ph-chapter" aria-labelledby="devotee-travel-heading">
+        <div class="ph-chapter-head">
+            <div>
+                <p class="dv-kicker">Exceptions</p>
+                <h2 id="devotee-travel-heading">Travel requests</h2>
+                <p>If a purohit does not already offer your place, you ask first. Book and pay only after they accept.</p>
+            </div>
+            <div class="pc-catalog-count">{{ pending_travel_count }} waiting</div>
+        </div>
+        {% if travel_requests %}
+        <div class="ph-request-list">
+            {% for item in travel_requests %}
+            <article class="ph-request">
+                <div class="ph-book-head">
+                    <div>
+                        <p class="ph-book-id">{{ item.request_id }}</p>
+                        <h3>{{ item.puja_package.puja.name|default:"Visit request" }}</h3>
+                    </div>
+                    <span class="status-pill">{{ item.get_status_display }}</span>
+                </div>
+                <dl class="ph-meta">
+                    <div><dt>Purohit</dt><dd>{{ item.purohit.name }}</dd></div>
+                    <div><dt>When</dt><dd>{{ item.preferred_date|date:"D, d M Y" }}{% if item.preferred_time %} · {{ item.preferred_time|time:"H:i" }}{% endif %}</dd></div>
+                    <div><dt>Place</dt><dd>{{ item.area.name }}, {{ item.city.name }}</dd></div>
+                    {% if item.travel_fee %}<div><dt>Travel fee</dt><dd>₹{{ item.travel_fee|floatformat:"0" }}</dd></div>{% endif %}
+                    {% if item.expires_at and item.status == 'accepted' %}
+                    <div><dt>Unlock</dt><dd>Expires {{ item.expires_at|date:"d M, H:i" }} if you do not book</dd></div>
+                    {% endif %}
+                    {% if item.address %}<div class="ph-meta-full"><dt>Address</dt><dd>{{ item.address }}</dd></div>{% endif %}
+                    {% if item.message %}<div class="ph-meta-full"><dt>Your note</dt><dd>“{{ item.message }}”</dd></div>{% endif %}
+                    {% if item.purohit_response %}<div class="ph-meta-full"><dt>Their reply</dt><dd>“{{ item.purohit_response }}”</dd></div>{% endif %}
+                </dl>
+                {% if item.status == 'accepted' and item.puja_package_id %}
+                <p class="ph-note is-ok">They accepted{% if item.travel_fee %} with a ₹{{ item.travel_fee|floatformat:"0" }} travel fee{% endif %}. Book within 48 hours to keep this unlock. You have not paid yet.</p>
+                <div class="ph-book-actions">
+                    <a class="btn btn-primary ph-btn-sm" href="{% url 'bookings:book' item.puja_package_id %}?request={{ item.request_id }}">Book this visit</a>
+                </div>
+                {% elif item.status == 'pending' %}
+                <p class="ph-note is-warn">Waiting for {{ item.purohit.name }} to accept or decline. You have not paid yet.</p>
+                {% elif item.status == 'declined' %}
+                <p class="ph-note">They declined this visit. You can ask again with a different date or place.</p>
+                {% endif %}
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="ph-empty">
+            <h3>No travel requests</h3>
+            <p>When you ask a purohit to visit a place they do not already offer, it will show here.</p>
+        </div>
+        {% endif %}
+    </section>
+
+    {% if suggested_pujas %}
+    <section id="browse-pujas" class="ph-chapter">
+        <div class="ph-chapter-head">
+            <div>
+                <p class="dv-kicker">Discover</p>
+                <h2>Popular this season</h2>
+                <p>Start from a ritual, then choose your purohit. Price and time stay clear before you pay.</p>
+            </div>
+            <a href="{% url 'pujas:list' %}" class="btn btn-outline ph-btn-sm">See all pujas</a>
+        </div>
+        <div class="dv-suggest">
+            {% for puja in suggested_pujas %}
+            <a href="{% url 'pujas:list' %}?q={{ puja.name|urlencode }}">
+                <div style="font-size:0.72rem; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:var(--color-primary); margin-bottom:6px;">{{ puja.category.name }}</div>
+                <div style="font-weight:700;">{{ puja.name }}</div>
+                <div style="font-size:0.8rem; color:var(--color-text-muted); margin-top:4px;">About {{ puja.base_duration_hours }}h</div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}

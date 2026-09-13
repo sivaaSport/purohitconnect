@@ -1,0 +1,1301 @@
+{% extends 'base.html' %}
+
+{% block title %}Purohit Dashboard | PurohitConnect{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+    .ph-home { margin-bottom: 1.35rem; }
+    .ph-hero {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 1.25rem;
+        flex-wrap: wrap;
+        padding: 1.4rem 1.5rem 1.5rem;
+        border-radius: 24px;
+        background:
+            radial-gradient(circle at 12% 0%, rgba(245, 158, 11, 0.22), transparent 42%),
+            linear-gradient(135deg, #fff7ed, #ffffff 55%);
+        border: 1px solid rgba(180, 83, 9, 0.14);
+    }
+    [data-theme="dark"] .ph-hero {
+        background:
+            radial-gradient(circle at 12% 0%, rgba(250, 204, 21, 0.18), transparent 42%),
+            linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.88));
+        border-color: rgba(250, 204, 21, 0.22);
+    }
+    .ph-kicker {
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--color-primary);
+        margin: 0 0 0.4rem;
+    }
+    .ph-hero h1 { margin: 0 0 0.4rem; font-size: 1.85rem; }
+    .ph-lead { margin: 0; color: var(--color-text-muted); max-width: 38rem; }
+    .ph-hero-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+    .ph-stats {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin-top: 0.9rem;
+    }
+    .ph-stat {
+        padding: 0.85rem 1rem;
+        border-radius: 16px;
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+    }
+    .ph-stat strong { display: block; font-size: 1.35rem; line-height: 1.1; }
+    .ph-stat span { font-size: 0.78rem; color: var(--color-text-muted); }
+    .ph-next {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        padding: 1.15rem 1.25rem;
+        border-radius: 20px;
+        margin-bottom: 1.25rem;
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+    }
+    .ph-next-when {
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: var(--color-primary);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+    @media (max-width: 860px) {
+        .ph-stats { grid-template-columns: 1fr 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="{ 
+    timelineOpen: false, 
+    activeBooking: null,
+    bookings: [
+        {% for booking in bookings %}
+        {
+            id: '{{ booking.booking_id }}',
+            db_id: '{{ booking.id }}',
+            puja: '{{ booking.puja_package.puja.name|escapejs }}',
+            customer: '{{ booking.customer.username|escapejs }}',
+            status: '{{ booking.status }}',
+            reschedule_status: '{{ booking.reschedule_status }}',
+            event_date: '{{ booking.event_date|date:"Y-m-d" }}',
+            event_time: '{% if booking.event_time %}{{ booking.event_time|time:"H:i" }}{% endif %}',
+            event_display: '{{ booking.event_date|date:"d M, Y" }}{% if booking.event_time %} at {{ booking.event_time|time:"H:i" }}{% endif %}',
+            started_at: '{% if booking.started_at %}true{% else %}false{% endif %}',
+            steps: [
+                { label: 'Request Received from {{ booking.customer.username }}', time: '{{ booking.created_at|date:'d M, H:i' }}', done: true, icon: 'inbox', color: 'var(--color-primary)' },
+                
+                {% if booking.payment_at %}
+                { label: 'Payment Verified', time: '{{ booking.payment_at|date:'d M, H:i' }}', done: true, icon: 'credit-card', color: 'var(--color-primary)' },
+                {% else %}
+                { label: 'Payment Pending', time: 'Waiting', done: false, icon: 'credit-card', color: 'var(--color-border)' },
+                {% endif %}
+                
+                {% if booking.reschedule_status != 'none' or booking.suggested_date %}
+                    {% if booking.suggested_date %}
+                        {
+                            label: '{% if booking.reschedule_requested_by_purohit %}Reschedule Requested by You{% elif booking.reschedule_requested_by_customer %}Reschedule Requested by {{ booking.customer.get_full_name|default:booking.customer.username|escapejs }}{% else %}Reschedule Requested{% endif %}',
+                            time: 'Requested on {% if booking.reschedule_requested_at %}{{ booking.reschedule_requested_at|date:"d M, H:i" }}{% else %}{{ booking.updated_at|date:"d M, H:i" }}{% endif %} | Suggested for {{ booking.suggested_date|date:"d M" }}{% if booking.suggested_time %} at {{ booking.suggested_time|time:"H:i" }}{% endif %}{% if booking.reschedule_status == "pending" and booking.reschedule_requested_by_purohit %} · Waiting for devotee response{% elif booking.reschedule_status == "pending" and booking.reschedule_requested_by_customer %} · Awaiting your response{% endif %}',
+                            done: true, icon: 'clock', color: '#F59E0B'
+                        },
+                    {% endif %}
+
+                    {% if booking.reschedule_status == 'accepted' %}
+                        {
+                            label: '{% if booking.reschedule_requested_by_purohit %}Reschedule Accepted by {{ booking.customer.get_full_name|default:booking.customer.username|escapejs }}{% else %}Reschedule Accepted by You{% endif %}',
+                            time: 'Accepted on {% if booking.reschedule_accepted_at %}{{ booking.reschedule_accepted_at|date:"d M, H:i" }}{% else %}{{ booking.updated_at|date:"d M, H:i" }}{% endif %} | Updated to {{ booking.event_date|date:"d M" }}{% if booking.event_time %} at {{ booking.event_time|time:"H:i" }}{% endif %}',
+                            done: true, icon: 'check-circle', color: '#10B981'
+                        },
+                    {% elif booking.reschedule_status == 'rejected' %}
+                        {
+                            label: '{% if booking.reschedule_requested_by_purohit %}Reschedule Declined by {{ booking.customer.get_full_name|default:booking.customer.username|escapejs }}{% else %}Reschedule Declined by You{% endif %}',
+                            time: 'Declined on {% if booking.reschedule_rejected_at %}{{ booking.reschedule_rejected_at|date:"d M, H:i" }}{% else %}{{ booking.updated_at|date:"d M, H:i" }}{% endif %}',
+                            done: true, icon: 'x-circle', color: '#EF4444'
+                        },
+                    {% endif %}
+                {% endif %}
+
+                {% if booking.status == 'cancelled' %}
+                { label: 'Booking Cancelled', time: 'Actioned on {{ booking.updated_at|date:'d M, H:i' }}', done: true, is_cancel: true, icon: 'slash', color: '#EF4444' },
+                {% else %}
+                    { 
+                        label: 'Booking Accepted by You', 
+                        time: '{% if booking.accepted_at %}Accepted on {{ booking.accepted_at|date:'d M, H:i' }} | Scheduled for {{ booking.event_date|date:'d M' }}{% else %}Waiting for your action{% endif %}', 
+                        done: {% if booking.accepted_at %}true{% else %}false{% endif %}, icon: 'check-square', color: 'var(--color-primary)' 
+                    },
+                    { 
+                        label: 'Ritual Started', 
+                        time: '{% if booking.started_at %}Started on {{ booking.started_at|date:'d M, H:i' }} | You have begun the puja{% else %}Awaiting Start Code from Devotee{% endif %}', 
+                        done: {% if booking.started_at %}true{% else %}false{% endif %}, icon: 'flame', color: '#8B5CF6' 
+                    },
+                    { 
+                        label: 'Ritual Completed', 
+                        time: '{% if booking.completed_at %}Completed on {{ booking.completed_at|date:'d M, H:i' }} | Ritual Performed Successfully{% else %}Finalizing puja...{% endif %}', 
+                        done: {% if booking.completed_at %}true{% else %}false{% endif %}, icon: 'sparkles', color: '#10B981' 
+                    }
+                {% endif %}
+            ]
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ]
+}">
+    <div class="container" style="margin-bottom: var(--spacing-2xl); padding-top: var(--spacing-xl);">
+        <section class="ph-home">
+            <div class="ph-hero">
+                <div>
+                    <p class="ph-kicker">Purohit home</p>
+                    <h1>Namaste, {{ purohit.name }}</h1>
+                    <p class="ph-lead">
+                        {% if ongoing_booking %}
+                            A ritual is live now — {{ ongoing_booking.puja_package.puja.name }}.
+                        {% elif pending_requests %}
+                            {{ pending_requests }} new request{{ pending_requests|pluralize }} waiting for you to accept.
+                        {% elif next_booking %}
+                            {% if days_until_next == 0 %}
+                                Today: {{ next_booking.puja_package.puja.name }}{% if next_booking.event_time %} at {{ next_booking.event_time|time:"H:i" }}{% endif %}.
+                            {% elif days_until_next == 1 %}
+                                Tomorrow: {{ next_booking.puja_package.puja.name }} for {{ next_booking.customer.get_full_name|default:next_booking.customer.username }}.
+                            {% else %}
+                                Next ritual in {{ days_until_next }} days — {{ next_booking.puja_package.puja.name }}.
+                            {% endif %}
+                        {% elif packages %}
+                            Your offerings are live. Incoming bookings will show here.
+                        {% else %}
+                            Add your first puja so devotees can book you.
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="ph-hero-actions">
+                    <a href="#incoming-bookings" class="btn btn-primary">Bookings</a>
+                    <a href="#calendar" class="btn btn-outline">Calendar</a>
+                    <a href="{% url 'accounts:wallet_dashboard' %}" class="btn btn-outline">Earnings</a>
+                </div>
+            </div>
+            <div class="ph-stats">
+                <div class="ph-stat"><strong>{{ pending_requests }}</strong><span>Pending bookings</span></div>
+                <div class="ph-stat"><strong>{{ upcoming_bookings }}</strong><span>Confirmed</span></div>
+                <div class="ph-stat"><strong>{{ pending_travel_count }}</strong><span>Travel waiting</span></div>
+                <div class="ph-stat"><strong>{{ places_count }}</strong><span>Places offered</span></div>
+            </div>
+            <nav class="ph-jump" aria-label="Dashboard sections">
+                <a href="#incoming-bookings">Bookings</a>
+                <a href="#calendar">Calendar</a>
+                <a href="#my-pujas">Pujas</a>
+                <a href="#service-locations">Locations</a>
+                <a href="#travel-requests">Travel</a>
+            </nav>
+        </section>
+
+        {% if next_pending and not ongoing_booking %}
+        <div class="ph-next">
+            <div>
+                <div class="ph-next-when">Needs your response</div>
+                <h2 style="margin: 0 0 0.25rem; font-size: 1.3rem;">{{ next_pending.puja_package.puja.name }}</h2>
+                <p style="margin: 0; color: var(--color-text-muted); font-size: 0.92rem;">
+                    From {{ next_pending.customer.get_full_name|default:next_pending.customer.username }}
+                    · {{ next_pending.event_date|date:"d M, Y" }}{% if next_pending.event_time %} at {{ next_pending.event_time|time:"H:i" }}{% endif %}
+                </p>
+            </div>
+            <a href="#incoming-bookings" class="btn btn-primary">Review request</a>
+        </div>
+        {% elif next_booking and not ongoing_booking %}
+        <div class="ph-next">
+            <div>
+                <div class="ph-next-when">
+                    {% if days_until_next == 0 %}Today{% elif days_until_next == 1 %}Tomorrow{% else %}{{ next_booking.event_date|date:"D, d M" }}{% endif %}
+                    {% if next_booking.event_time %} · {{ next_booking.event_time|time:"H:i" }}{% endif %}
+                </div>
+                <h2 style="margin: 0 0 0.25rem; font-size: 1.3rem;">{{ next_booking.puja_package.puja.name }}</h2>
+                <p style="margin: 0; color: var(--color-text-muted); font-size: 0.92rem;">
+                    For {{ next_booking.customer.get_full_name|default:next_booking.customer.username }}
+                    {% if next_booking.get_venue_label %} · {{ next_booking.get_venue_label }}{% endif %}
+                    {% if next_booking.area %} · {{ next_booking.area.name }}{% endif %}
+                </p>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <a href="{% url 'dashboard:booking_chat' next_booking.booking_id %}" class="btn btn-outline">Message devotee</a>
+                <a href="#calendar" class="btn btn-outline">Open calendar</a>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if ongoing_booking %}
+        <section class="ph-live" aria-label="Live ritual">
+            <div class="ph-live-copy">
+                <p class="ph-live-kicker">Live ritual · started {{ ongoing_booking.started_at|time:"H:i" }}</p>
+                <h2>{{ ongoing_booking.puja_package.puja.name }}</h2>
+                <p>For {{ ongoing_booking.customer.get_full_name|default:ongoing_booking.customer.username }}{% if ongoing_booking.get_venue_label %} · {{ ongoing_booking.get_venue_label }}{% endif %}{% if ongoing_booking.area %} · {{ ongoing_booking.area.name }}{% endif %}</p>
+            </div>
+            <form method="POST" action="{% url 'dashboard:update_booking' ongoing_booking.booking_id %}" class="ph-otp-form is-done">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="completed">
+                <label>Done code from devotee</label>
+                <input type="text" name="verification_code" placeholder="4-digit code" required inputmode="numeric" autocomplete="one-time-code">
+                <button type="submit" class="btn btn-primary">Mark complete</button>
+            </form>
+        </section>
+        {% endif %}
+
+        <div class="dashboard-grid ph-workspace">
+            {% include 'dashboard/partials/purohit_bookings.html' %}
+
+            <aside class="ph-calendar-col">
+                <div id="calendar" class="card ph-calendar">
+                    {% include 'components/calendar_styles.html' %}
+                    <div class="ph-calendar-head">
+                        <div>
+                            <p class="pc-catalog-kicker">Your time</p>
+                            <h2>Availability</h2>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <a href="?cal_year={{ cal_prev_year }}&cal_month={{ cal_prev_month }}{% if selected_day %}&day={{ selected_day|date:'Y-m-d' }}{% endif %}{% if preview_package %}&preview_package={{ preview_package.id }}{% endif %}#calendar" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;">‹</a>
+                            <a href="?cal_year={{ cal_next_year }}&cal_month={{ cal_next_month }}{% if selected_day %}&day={{ selected_day|date:'Y-m-d' }}{% endif %}{% if preview_package %}&preview_package={{ preview_package.id }}{% endif %}#calendar" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;">›</a>
+                        </div>
+                    </div>
+                    <div style="font-weight: 700; margin-bottom: 6px;">{{ cal_month_label }}</div>
+                    <p style="margin: 0 0 12px; font-size: 0.8rem; color: var(--color-text-muted);">Block busy times, set working hours, and preview slots using your ritual durations.</p>
+
+                    <form method="POST" action="{% url 'dashboard:toggle_availability' %}" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 12px; align-items: end;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="set_work_hours">
+                        {% if preview_package %}<input type="hidden" name="preview_package" value="{{ preview_package.id }}">{% endif %}
+                        {% if selected_day %}<input type="hidden" name="date" value="{{ selected_day|date:'Y-m-d' }}">{% endif %}
+                        <div>
+                            <label style="display:block; font-size:0.7rem; font-weight:700; color: var(--color-text-muted); margin-bottom:4px;">DAY START</label>
+                            <input type="time" name="work_start" value="{{ work_start|time:'H:i' }}" required style="width:100%; padding: 8px; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-bg-main); color: var(--color-text-main);">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.7rem; font-weight:700; color: var(--color-text-muted); margin-bottom:4px;">DAY END</label>
+                            <input type="time" name="work_end" value="{{ work_end|time:'H:i' }}" required style="width:100%; padding: 8px; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-bg-main); color: var(--color-text-main);">
+                        </div>
+                        <button type="submit" class="btn btn-outline" style="padding: 8px 10px; font-size: 0.75rem; white-space: nowrap;">Save hours</button>
+                    </form>
+                    <p style="margin: -4px 0 12px; font-size: 0.72rem; color: var(--color-text-muted);">Accept 06:00–21:00, or extend (e.g. 05:00–22:00) so long rituals like weddings still fit.</p>
+
+                    {% if packages %}
+                    <form method="GET" action="{% url 'dashboard:purohit' %}#calendar" style="margin-bottom: 12px;">
+                        <input type="hidden" name="cal_year" value="{{ cal_year }}">
+                        <input type="hidden" name="cal_month" value="{{ cal_month }}">
+                        {% if selected_day %}<input type="hidden" name="day" value="{{ selected_day|date:'Y-m-d' }}">{% endif %}
+                        <label style="display:block; font-size:0.7rem; font-weight:700; color: var(--color-text-muted); margin-bottom:4px;">PREVIEW SLOTS FOR</label>
+                        <select name="preview_package" onchange="this.form.submit()" style="width:100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-bg-main); color: var(--color-text-main); font-size: 0.85rem;">
+                            {% for package in packages %}
+                            <option value="{{ package.id }}" {% if preview_package and preview_package.id == package.id %}selected{% endif %}>{{ package.puja.name }} · {{ package.get_duration_hours }}h</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                    {% endif %}
+
+                    <div class="pc-cal-grid pc-cal-head">
+                        <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
+                    </div>
+                    <div class="pc-cal-grid">
+                        {% for week in calendar_weeks %}
+                            {% for day in week %}
+                                {% if day.in_month %}
+                                    {% if day.is_past %}
+                                    <div class="pc-cal-day" style="opacity:0.4; cursor:default;">{{ day.date.day }}</div>
+                                    {% else %}
+                                    <a href="?cal_year={{ cal_year }}&cal_month={{ cal_month }}&day={{ day.date|date:'Y-m-d' }}{% if preview_package %}&preview_package={{ preview_package.id }}{% endif %}#calendar"
+                                       class="pc-cal-day status-{{ day.status }} {% if day.is_today %}is-today{% endif %} {% if selected_day == day.date %}is-selected{% endif %}"
+                                       title="{% if day.status == 'full' %}Fully blocked{% elif day.status == 'partial' %}Partially blocked{% else %}Open{% endif %}">
+                                        {{ day.date.day }}
+                                    </a>
+                                    {% endif %}
+                                {% else %}
+                                    <div></div>
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                    <div class="pc-cal-legend">
+                        <span><i class="pc-cal-dot" style="background: rgba(16,185,129,0.45);"></i> Open</span>
+                        <span><i class="pc-cal-dot" style="background: rgba(245,158,11,0.55);"></i> Timed blocks</span>
+                        <span><i class="pc-cal-dot" style="background: rgba(239,68,68,0.45);"></i> Full day</span>
+                    </div>
+
+                    {% if selected_day %}
+                    <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--color-border);">
+                        <div style="font-weight: 800; margin-bottom: 8px;">{{ selected_day|date:"D, d M Y" }}</div>
+
+                        {% if selected_day_bookings %}
+                        <div style="margin-bottom: 12px;">
+                            <div style="font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted); margin-bottom: 6px;">BOOKINGS</div>
+                            {% for b in selected_day_bookings %}
+                            <div style="font-size: 0.82rem; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--color-border); margin-bottom: 6px;">
+                                <strong>{{ b.get_time_window_label }}</strong>
+                                · {{ b.puja_package.puja.name }} · {{ b.customer.username }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div style="margin-bottom: 12px;">
+                            <div style="font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted); margin-bottom: 6px;">YOUR BLOCKS</div>
+                            {% for block in selected_blocks %}
+                            <div style="display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 10px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); margin-bottom: 6px;">
+                                <div style="font-size: 0.82rem;">
+                                    <strong>{{ block.label }}</strong>
+                                    {% if block.blocked_reason %}<div style="opacity:0.8;">{{ block.blocked_reason }}</div>{% endif %}
+                                </div>
+                                <form method="POST" action="{% url 'dashboard:toggle_availability' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_block">
+                                    <input type="hidden" name="block_id" value="{{ block.id }}">
+                                    <button type="submit" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.72rem; color:#EF4444; border-color:#EF4444;">Remove</button>
+                                </form>
+                            </div>
+                            {% empty %}
+                            <div style="font-size: 0.82rem; color: var(--color-text-muted); margin-bottom: 8px;">No blocks — day is open for bookings.</div>
+                            {% endfor %}
+                        </div>
+
+                        <div style="font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted); margin-bottom: 6px;">QUICK BLOCK</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px;">
+                            <form method="POST" action="{% url 'dashboard:toggle_availability' %}">{% csrf_token %}<input type="hidden" name="action" value="preset"><input type="hidden" name="preset" value="fullday"><input type="hidden" name="date" value="{{ selected_day|date:'Y-m-d' }}"><button class="btn btn-outline" style="width:100%; padding:6px; font-size:0.75rem;">All day</button></form>
+                            <form method="POST" action="{% url 'dashboard:toggle_availability' %}">{% csrf_token %}<input type="hidden" name="action" value="preset"><input type="hidden" name="preset" value="morning"><input type="hidden" name="date" value="{{ selected_day|date:'Y-m-d' }}"><button class="btn btn-outline" style="width:100%; padding:6px; font-size:0.75rem;">Morning</button></form>
+                            <form method="POST" action="{% url 'dashboard:toggle_availability' %}">{% csrf_token %}<input type="hidden" name="action" value="preset"><input type="hidden" name="preset" value="afternoon"><input type="hidden" name="date" value="{{ selected_day|date:'Y-m-d' }}"><button class="btn btn-outline" style="width:100%; padding:6px; font-size:0.75rem;">Afternoon</button></form>
+                            <form method="POST" action="{% url 'dashboard:toggle_availability' %}">{% csrf_token %}<input type="hidden" name="action" value="preset"><input type="hidden" name="preset" value="evening"><input type="hidden" name="date" value="{{ selected_day|date:'Y-m-d' }}"><button class="btn btn-outline" style="width:100%; padding:6px; font-size:0.75rem;">Evening</button></form>
+                        </div>
+
+                        <form method="POST" action="{% url 'dashboard:toggle_availability' %}" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="add_range">
+                            <input type="hidden" name="date" value="{{ selected_day|date:'Y-m-d' }}">
+                            <input type="time" name="start_time" required style="padding: 8px; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-bg-main); color: var(--color-text-main);">
+                            <input type="time" name="end_time" required style="padding: 8px; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-bg-main); color: var(--color-text-main);">
+                            <input type="text" name="reason" placeholder="Reason (optional)" style="grid-column: 1 / -1; padding: 8px; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-bg-main); color: var(--color-text-main);">
+                            <button type="submit" class="btn btn-primary" style="grid-column: 1 / -1; padding: 8px; font-size: 0.85rem;">Block custom time</button>
+                        </form>
+                        <form method="POST" action="{% url 'dashboard:toggle_availability' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="clear_day">
+                            <input type="hidden" name="date" value="{{ selected_day|date:'Y-m-d' }}">
+                            <button type="submit" class="btn btn-outline" style="width: 100%; padding: 8px; font-size: 0.8rem;">Clear all blocks this day</button>
+                        </form>
+
+                        {% if selected_slots %}
+                        <div style="margin-top: 14px;">
+                            <div style="font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted); margin-bottom: 6px;">
+                                SLOT PREVIEW
+                                {% if preview_package %}
+                                · {{ preview_package.puja.name }} · {{ calendar_duration }}h windows
+                                {% else %}
+                                · {{ calendar_duration }}h windows
+                                {% endif %}
+                            </div>
+                            <div class="pc-slot-grid">
+                                {% for slot in selected_slots %}
+                                <div class="pc-slot-chip {% if not slot.available %}is-disabled{% endif %}" style="cursor: default;">
+                                    <span>{{ slot.label }}{% if not slot.available %}<div class="pc-slot-meta">{{ slot.status|title }}</div>{% endif %}</span>
+                                </div>
+                                {% empty %}
+                                <p style="margin: 0; font-size: 0.8rem; color: #FCA5A5;">No slots fit — extend working hours or shorten this ritual's duration.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% elif selected_day and preview_package %}
+                        <div style="margin-top: 14px; font-size: 0.85rem; color: #FCA5A5;">
+                            No {{ calendar_duration }}h slots fit inside {{ work_start|time:'H:i' }}–{{ work_end|time:'H:i' }}. Extend day hours or shorten duration.
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <p style="margin: 14px 0 0; font-size: 0.85rem; color: var(--color-text-muted);">Select a day to manage timed availability.</p>
+                    {% endif %}
+                </div>
+            </aside>
+        </div>
+
+        {% include 'dashboard/partials/my_pujas.html' %}
+        {% include 'dashboard/partials/service_locations.html' %}
+        {% include 'dashboard/partials/travel_requests.html' %}
+    </div>
+
+    <!-- Sidebar Journey Tracker -->
+    <div x-show="timelineOpen" style="position: fixed; inset: 0; z-index: 3000; display: flex; justify-content: flex-end;" x-cloak>
+        <div @click="timelineOpen = false" style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);"></div>
+        <div x-show="timelineOpen" 
+             x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="translateX(100%)" x-transition:enter-end="translateX(0)"
+             x-transition:leave="transition ease-in duration-300 transform" x-transition:leave-start="translateX(0)" x-transition:leave-end="translateX(100%)"
+             style="position: relative; width: 100%; max-width: 420px; background: var(--color-bg-card); height: 100%; box-shadow: var(--shadow-lg); padding: var(--spacing-xl); overflow-y: auto; border-left: 1px solid var(--color-border);">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h2 style="margin: 0; font-size: 1.5rem;">Journey Tracker</h2>
+                <button @click="timelineOpen = false" style="background: none; border: none; cursor: pointer; color: var(--color-text-muted); font-size: 24px;">&times;</button>
+            </div>
+
+            <template x-if="activeBooking">
+                <div>
+                    <div style="margin-bottom: 35px; background: rgba(var(--color-primary-rgb), 0.05); padding: 20px; border-radius: 16px; border: 1px solid var(--color-border);">
+                        <div style="color: var(--color-primary); font-weight: 700; font-size: 0.8rem; font-family: monospace; letter-spacing: 1px;" x-text="activeBooking.id"></div>
+                        <h3 x-text="activeBooking.puja" style="margin: 8px 0; font-size: 1.2rem;"></h3>
+                        <div style="font-size: 0.9rem; color: var(--color-text-muted);">Devotee: <span x-text="activeBooking.customer" style="color: var(--color-text-main); font-weight: 600;"></span></div>
+                    </div>
+
+                    <div style="position: relative; padding-left: 45px;">
+                        <div :style="'position: absolute; left: 16px; top: 0; bottom: 0; width: 2px; background: ' + (activeBooking.status === 'cancelled' ? 'rgba(239, 68, 68, 0.2)' : 'var(--color-border)')"></div>
+                        
+                        <template x-for="(step, index) in activeBooking.steps" :key="index">
+                            <div style="position: relative; margin-bottom: 35px;">
+                                <div :style="'position: absolute; left: -43px; top: 0; width: 32px; height: 32px; border-radius: 10px; background: ' + (step.done ? step.color : 'var(--color-bg-card)') + '; border: 2px solid ' + (step.done ? step.color : 'var(--color-border)') + '; z-index: 2; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px ' + (step.done ? 'rgba(0,0,0,0.1)' : 'transparent')">
+                                    <i x-show="step.done && !step.is_cancel" :data-lucide="step.icon" style="width: 16px; height: 16px; color: white;"></i>
+                                    <i x-show="step.is_cancel" data-lucide="x" style="width: 16px; height: 16px; color: white;"></i>
+                                </div>
+                                <div style="display: flex; flex-direction: column;">
+                                    <span :style="'font-weight: 700; font-size: 1.05rem; color: ' + (step.done ? (step.is_cancel ? '#EF4444' : 'var(--color-text-main)') : 'var(--color-text-muted)')" x-text="step.label"></span>
+                                    <span style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 6px; display: flex; align-items: center; gap: 6px;">
+                                        <i data-lucide="clock" style="width: 12px;"></i> <span x-text="step.time"></span>
+                                    </span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+
+<script>
+    //confirmCancellation & confirmReschedule ...
+    function confirmCancellation(bookingId) {
+        Swal.fire({
+            title: 'Cancel Booking?', text: 'Refund will be initiated.', icon: 'warning',
+            showCancelButton: true, confirmButtonColor: '#EF4444', confirmButtonText: 'Yes, Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.createElement('form'); form.method = 'POST'; form.action = `/dashboard/booking/${bookingId}/cancel/`;
+                const csrf = document.createElement('input'); csrf.type = 'hidden'; csrf.name = 'csrfmiddlewaretoken'; csrf.value = '{{ csrf_token }}';
+                form.appendChild(csrf); document.body.appendChild(form); form.submit();
+            }
+        });
+    }
+
+    function confirmReschedule(booking) {
+        if (!booking) return;
+        const currentWhen = booking.event_display || 'Not set';
+        const pujaName = booking.puja || 'this puja';
+        Swal.fire({
+            title: 'Request Reschedule',
+            width: 440,
+            padding: '1.5rem',
+            customClass: {
+                popup: 'reschedule-swal',
+                htmlContainer: 'reschedule-swal-body',
+                confirmButton: 'reschedule-swal-confirm',
+                cancelButton: 'reschedule-swal-cancel',
+                title: 'reschedule-swal-title'
+            },
+            html: `
+                <div class="rs-modal">
+                    <div class="rs-current">
+                        <div class="rs-current-label">Current schedule</div>
+                        <div class="rs-current-puja">${pujaName}</div>
+                        <div class="rs-current-when">${currentWhen}</div>
+                    </div>
+                    <div class="rs-field">
+                        <label for="swal-date">Suggest new date</label>
+                        <input type="date" id="swal-date" class="rs-input" value="${booking.event_date || ''}">
+                    </div>
+                    <div class="rs-field">
+                        <label for="swal-time">Suggest new time</label>
+                        <input type="time" id="swal-time" class="rs-input" value="${booking.event_time || ''}">
+                    </div>
+                    <div class="rs-field">
+                        <label for="swal-reason">Reason <span>(optional)</span></label>
+                        <input type="text" id="swal-reason" class="rs-input" placeholder="e.g. family emergency" maxlength="255">
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            focusConfirm: false,
+            confirmButtonText: 'Send Request',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#D97706',
+            cancelButtonColor: '#334155',
+            preConfirm: () => {
+                const date = document.getElementById('swal-date').value;
+                const time = document.getElementById('swal-time').value;
+                const reason = document.getElementById('swal-reason').value.trim();
+                if (!date || !time) {
+                    Swal.showValidationMessage('Please select both a new date and time');
+                    return false;
+                }
+                if (date === booking.event_date && time === booking.event_time) {
+                    Swal.showValidationMessage('Choose a different date or time than the current schedule');
+                    return false;
+                }
+                return { date, time, reason };
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const bookingId = booking.id || booking.booking_id;
+                const form = document.createElement('form'); form.method = 'POST'; form.action = `/dashboard/booking/${bookingId}/reschedule/request/`;
+                const csrf = document.createElement('input'); csrf.type = 'hidden'; csrf.name = 'csrfmiddlewaretoken'; csrf.value = '{{ csrf_token }}'; form.appendChild(csrf);
+                const d = document.createElement('input'); d.type='hidden'; d.name='suggested_date'; d.value=result.value.date; form.appendChild(d);
+                const t = document.createElement('input'); t.type='hidden'; t.name='suggested_time'; t.value=result.value.time; form.appendChild(t);
+                const r = document.createElement('input'); r.type='hidden'; r.name='reason'; r.value=result.value.reason || ''; form.appendChild(r);
+                document.body.appendChild(form); form.submit();
+            }
+        });
+    }
+</script>
+
+<style>
+    [x-cloak] { display: none !important; }
+    @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
+    .pulse-dot { animation: pulse 2s infinite; }
+
+    .pc-catalog {
+        margin-bottom: 0.25rem;
+    }
+    .pc-catalog-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 16px;
+        margin-bottom: 18px;
+        flex-wrap: wrap;
+    }
+    .pc-catalog-kicker {
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--color-primary);
+        margin-bottom: 4px;
+    }
+    .pc-catalog-head h2 {
+        margin: 0 0 6px;
+        font-size: 1.65rem;
+    }
+    .pc-catalog-head p {
+        margin: 0;
+        max-width: 42rem;
+        color: var(--color-text-muted);
+        font-size: 0.92rem;
+        line-height: 1.45;
+    }
+    .pc-catalog-count {
+        padding: 8px 14px;
+        border-radius: 999px;
+        border: 1px solid var(--color-border);
+        background: var(--color-bg-card);
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--color-text-muted);
+        white-space: nowrap;
+    }
+    .pc-catalog-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+    }
+    .pc-offer {
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+        border-radius: 20px;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-height: 100%;
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
+    }
+    .pc-offer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .pc-offer-cat {
+        display: inline-block;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-primary);
+        margin-bottom: 6px;
+    }
+    .pc-offer h3 {
+        margin: 0;
+        font-size: 1.2rem;
+        line-height: 1.25;
+    }
+    .pc-offer-price {
+        font-size: 1.35rem;
+        font-weight: 800;
+        color: var(--color-primary);
+        white-space: nowrap;
+    }
+    .pc-offer-timeline {
+        display: flex;
+        overflow: hidden;
+        border-radius: 999px;
+        min-height: 34px;
+        background: rgba(148, 163, 184, 0.12);
+    }
+    .pc-offer-seg {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.72rem;
+        font-weight: 800;
+        padding: 0 12px;
+    }
+    .pc-offer-seg.is-ritual {
+        flex: 4;
+        background: linear-gradient(135deg, #f59e0b, #facc15);
+        color: #111827;
+    }
+    .pc-offer-seg.is-buffer {
+        flex: 1.1;
+        background: rgba(16, 185, 129, 0.18);
+        color: #6ee7b7;
+    }
+    [data-theme="light"] .pc-offer-seg.is-buffer {
+        color: #047857;
+        background: rgba(16, 185, 129, 0.16);
+    }
+    .pc-offer-hint {
+        margin: 0;
+        font-size: 0.8rem;
+        color: var(--color-text-muted);
+        line-height: 1.4;
+    }
+    .pc-offer-chip {
+        align-self: flex-start;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 5px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--color-border);
+        color: var(--color-text-muted);
+    }
+    .pc-offer-chip.is-samagri {
+        border-color: rgba(16, 185, 129, 0.35);
+        background: rgba(16, 185, 129, 0.1);
+        color: #6ee7b7;
+    }
+    [data-theme="light"] .pc-offer-chip.is-samagri {
+        color: #047857;
+    }
+    .pc-venue-caption {
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+        margin-bottom: 4px;
+    }
+    .pc-venues { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
+    .pc-venue-chip {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 3px 8px; border-radius: 999px;
+        background: rgba(217, 119, 6, 0.12);
+        color: var(--color-secondary);
+        font-size: 0.72rem; font-weight: 700;
+    }
+    .pc-venue-chip i { width: 12px; height: 12px; }
+    .pc-venue-note { margin: 0 0 8px; font-size: 0.78rem; color: var(--color-text-muted); }
+    .pc-venue-fields {
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        padding: 10px 12px;
+        margin: 4px 0 8px;
+        grid-column: 1 / -1;
+    }
+    .pc-venue-fields legend {
+        font-size: 0.82rem;
+        font-weight: 800;
+        padding: 0 4px;
+    }
+    .pc-venue-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+        margin: 6px 0 10px;
+    }
+    .pc-offer-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: auto;
+    }
+    .pc-offer-actions form {
+        margin: 0;
+    }
+    .pc-offer-btn,
+    .pc-offer-save {
+        flex: 1;
+        padding: 0.6rem 0.9rem;
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+    .pc-offer-remove {
+        padding: 0.6rem 0.9rem;
+        font-size: 0.85rem;
+        color: #ef4444 !important;
+        border-color: #ef4444 !important;
+    }
+    .pc-offer-editor {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--color-border);
+    }
+    .pc-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .pc-field-full {
+        grid-column: 1 / -1;
+    }
+    .pc-field label {
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+    }
+    .pc-field label span {
+        font-weight: 600;
+        text-transform: none;
+        letter-spacing: 0;
+        opacity: 0.8;
+    }
+    .pc-field-control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        background: var(--color-bg-main);
+        padding: 0 12px;
+        min-height: 44px;
+    }
+    .pc-field-control span {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--color-text-muted);
+    }
+    .pc-field-control input,
+    .pc-field select,
+    .pc-field textarea {
+        width: 100%;
+        border: none;
+        background: transparent;
+        color: var(--color-text-main);
+        font: inherit;
+        outline: none;
+        padding: 0;
+    }
+    .pc-field select,
+    .pc-field textarea,
+    .pc-field input[type="text"] {
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        background: var(--color-bg-main);
+        color: var(--color-text-main);
+        padding: 11px 12px;
+    }
+    .pc-service-form { margin-top: 0.5rem; }
+    .pc-loc-home {
+        display: grid;
+        grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
+        gap: 20px;
+        align-items: start;
+        margin-bottom: 18px;
+        padding: 18px 20px;
+        border-radius: 20px;
+        border: 1px solid var(--color-border);
+        background: var(--color-bg-card);
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12);
+    }
+    .pc-loc-home-copy h3 { margin: 0 0 6px; font-size: 1.15rem; }
+    .pc-loc-home-copy p { margin: 0; color: var(--color-text-muted); font-size: 0.88rem; line-height: 1.45; }
+    .pc-loc-home-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .pc-loc-home-save { grid-column: 1 / -1; }
+    .pc-loc-grid,
+    .pc-loc-add-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+    .pc-loc-badge {
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 5px 10px;
+        border-radius: 999px;
+        white-space: nowrap;
+        border: 1px solid var(--color-border);
+        color: var(--color-text-muted);
+    }
+    .pc-loc-badge.is-always {
+        background: rgba(16, 185, 129, 0.12);
+        border-color: rgba(16, 185, 129, 0.28);
+        color: #6ee7b7;
+    }
+    .pc-loc-badge.is-visit {
+        background: rgba(250, 204, 21, 0.12);
+        border-color: rgba(250, 204, 21, 0.3);
+        color: #fde68a;
+    }
+    .pc-loc-badge.is-pending {
+        background: rgba(245, 158, 11, 0.12);
+        border-color: rgba(245, 158, 11, 0.3);
+        color: #fbbf24;
+    }
+    [data-theme="light"] .pc-loc-badge.is-always { color: #047857; }
+    [data-theme="light"] .pc-loc-badge.is-visit { color: #92400e; }
+    [data-theme="light"] .pc-loc-badge.is-pending { color: #b45309; }
+    .pc-loc-city {
+        margin: 4px 0 0;
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: var(--color-text-main);
+    }
+    .pc-loc-remove { margin-top: auto; }
+    .pc-loc-add { border-style: dashed; }
+    .pc-loc-empty { text-align: left; }
+    .pc-loc-policy { margin-bottom: 16px; max-width: 640px; padding-bottom: 8px; }
+    .pc-policy-save { align-self: flex-start; width: auto !important; min-width: 140px; }
+    .pc-policy-toggle { display: grid; gap: 8px; }
+    .pc-policy-choice {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        cursor: pointer;
+    }
+    .pc-policy-choice:has(input:checked) {
+        border-color: #d97706;
+        box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.16);
+        background: #fffbeb;
+    }
+    [data-theme="dark"] .pc-policy-choice:has(input:checked) {
+        background: rgba(250, 204, 21, 0.08);
+        border-color: #facc15;
+    }
+    .pc-policy-saved,
+    .pc-policy-off {
+        margin: 0;
+        padding: 8px 10px;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+    .pc-policy-saved {
+        background: rgba(16, 185, 129, 0.12);
+        color: #047857;
+    }
+    .pc-policy-off {
+        background: rgba(148, 163, 184, 0.16);
+        color: #334155;
+    }
+    [data-theme="dark"] .pc-policy-saved { color: #6ee7b7; }
+    [data-theme="dark"] .pc-policy-off { color: #cbd5e1; }
+    #travel-requests { padding-bottom: 80px; }
+    .pc-request-actions { display: grid; gap: 10px; }
+    .pc-request-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+    @media (max-width: 860px) {
+        .pc-loc-home,
+        .pc-loc-home-fields { grid-template-columns: 1fr; }
+    }
+    .pc-service-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+    .pc-service-areas {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+        padding: 10px 0 2px;
+    }
+    .pc-check {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        color: var(--color-text-muted);
+    }
+    .pc-offer-save {
+        grid-column: 1 / -1;
+    }
+    .pc-offer-empty {
+        align-items: center;
+        text-align: center;
+        justify-content: center;
+        color: var(--color-text-muted);
+        border-style: dashed;
+    }
+    .pc-offer-empty i {
+        width: 28px;
+        height: 28px;
+    }
+    .pc-offer-add {
+        border-style: dashed;
+        background: transparent;
+    }
+    .pc-offer-add-trigger {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        width: 100%;
+        background: none;
+        border: none;
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+        padding: 4px 0;
+    }
+    .pc-offer-plus {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        font-size: 1.6rem;
+        font-weight: 700;
+        background: rgba(250, 204, 21, 0.14);
+        color: var(--color-primary);
+        flex-shrink: 0;
+    }
+    .pc-offer-add-trigger strong {
+        display: block;
+        font-size: 1.05rem;
+    }
+    .pc-offer-add-trigger small {
+        display: block;
+        color: var(--color-text-muted);
+        margin-top: 2px;
+        font-size: 0.8rem;
+    }
+    @media (max-width: 720px) {
+        .pc-offer-editor {
+            grid-template-columns: 1fr;
+        }
+        .pc-catalog-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .ph-jump {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 1rem;
+    }
+    .ph-jump a {
+        padding: 0.45rem 0.85rem;
+        border-radius: 999px;
+        border: 1px solid var(--color-border);
+        background: var(--color-bg-card);
+        color: var(--color-text-main);
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+    .ph-jump a:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .ph-workspace.dashboard-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.8fr);
+        gap: 2rem;
+        align-items: start;
+        margin: 0 0 2.75rem;
+    }
+    .ph-chapter { margin: 0 0 2.75rem; }
+    .ph-chapter-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 16px;
+        margin-bottom: 1.1rem;
+        flex-wrap: wrap;
+    }
+    .ph-chapter-head h2,
+    .ph-calendar h2 {
+        margin: 0 0 6px;
+        font-size: 1.55rem;
+        color: var(--color-text-main);
+    }
+    .ph-chapter-head p {
+        margin: 0;
+        max-width: 44rem;
+        color: var(--color-text-muted);
+        font-size: 0.95rem;
+        line-height: 1.5;
+    }
+    .ph-group-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 1.25rem 0 0.7rem;
+        font-size: 0.95rem;
+    }
+    .ph-group-title span {
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
+        border: 1px solid var(--color-border);
+        border-radius: 999px;
+        padding: 1px 8px;
+    }
+    .ph-book-list,
+    .ph-request-list { display: grid; gap: 14px; }
+    .ph-book,
+    .ph-request,
+    .ph-policy,
+    .ph-add-form,
+    .ph-empty,
+    .ph-live {
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+        border-radius: 18px;
+        padding: 1.15rem 1.2rem 1.2rem;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+    }
+    .ph-book-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.85rem;
+    }
+    .ph-book-id {
+        margin: 0 0 4px;
+        font-family: ui-monospace, monospace;
+        font-size: 0.78rem;
+        color: var(--color-text-muted);
+    }
+    .ph-book h3,
+    .ph-request h3,
+    .ph-policy h3,
+    .ph-empty h3,
+    .ph-add-form h3,
+    .ph-live h2 {
+        margin: 0;
+        font-size: 1.2rem;
+        color: var(--color-text-main);
+    }
+    .ph-book h3.is-cancelled { text-decoration: line-through; opacity: 0.65; }
+    .ph-book-status { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+    .ph-book-amount { font-size: 1.2rem; color: var(--color-secondary); }
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 800;
+        cursor: pointer;
+        border: none;
+        background: rgba(33, 150, 243, 0.1);
+        color: #1565C0;
+    }
+    .status-pill i { width: 14px; height: 14px; }
+    .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .ph-status-reschedule_pending { background: rgba(245, 158, 11, 0.12); color: #B45309; }
+    .ph-status-cancelled { background: rgba(239, 68, 68, 0.1); color: #B91C1C; }
+    .ph-status-completed { background: rgba(16, 185, 129, 0.1); color: #047857; }
+    .ph-status-started { background: rgba(139, 92, 246, 0.1); color: #7C3AED; }
+    .ph-status-awaiting_payment { background: rgba(239, 68, 68, 0.12); color: #DC2626; }
+    .ph-status-pending_confirmation { background: rgba(255, 166, 77, 0.12); color: #B45309; }
+    .ph-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px 18px;
+        margin: 0 0 1rem;
+    }
+    .ph-meta dt {
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+        margin-bottom: 3px;
+    }
+    .ph-meta dd {
+        margin: 0;
+        font-size: 0.95rem;
+        line-height: 1.45;
+        color: var(--color-text-main);
+    }
+    .ph-meta-full { grid-column: 1 / -1; }
+    .ph-book-actions,
+    .ph-policy-actions,
+    .ph-add-bar,
+    .pc-request-buttons,
+    .ph-note-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+    }
+    .ph-btn-sm { padding: 0.45rem 0.85rem; font-size: 0.85rem; }
+    .ph-btn-sm i { width: 14px; height: 14px; }
+    .btn.is-danger, .ph-btn-sm.is-danger { color: #EF4444 !important; border-color: #EF4444 !important; }
+    .btn.is-warn, .ph-btn-sm.is-warn { color: #B45309 !important; border-color: #F59E0B !important; }
+    .ph-wait { font-size: 0.85rem; color: var(--color-text-muted); }
+    .ph-otp-form {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: end;
+        gap: 8px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(139, 92, 246, 0.06);
+        border: 1px solid rgba(139, 92, 246, 0.16);
+    }
+    .ph-otp-form.is-done {
+        background: rgba(16, 185, 129, 0.06);
+        border-color: rgba(16, 185, 129, 0.2);
+    }
+    .ph-otp-form label {
+        width: 100%;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+    }
+    .ph-otp-form input {
+        width: 7.5rem;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--color-border);
+        background: var(--color-bg-main);
+        color: var(--color-text-main);
+        font-family: ui-monospace, monospace;
+    }
+    .ph-note, .ph-review {
+        margin: 12px 0 0;
+        padding: 12px 14px;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        line-height: 1.45;
+    }
+    .ph-note p { margin: 4px 0 0; }
+    .ph-note.is-warn { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); color: #B45309; }
+    .ph-note.is-ok { background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.22); color: #047857; }
+    .ph-note-row { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .ph-review { background: rgba(255, 215, 0, 0.06); border: 1px solid rgba(255, 215, 0, 0.22); }
+    .ph-stars { display: flex; gap: 3px; margin-bottom: 6px; }
+    .ph-stars i { width: 14px; height: 14px; color: #FFD700; }
+    .ph-stars i.is-on { fill: #FFD700; }
+    .ph-empty { text-align: left; }
+    .ph-empty i { width: 28px; height: 28px; color: var(--color-text-muted); margin-bottom: 8px; }
+    .ph-empty p { margin: 6px 0 14px; color: var(--color-text-muted); }
+    .ph-live {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.5rem;
+        border-color: rgba(139, 92, 246, 0.28);
+    }
+    .ph-live-kicker {
+        margin: 0 0 4px;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #7C3AED;
+    }
+    .ph-live-copy p { margin: 4px 0 0; color: var(--color-text-muted); }
+    .ph-muted { color: var(--color-text-muted); }
+    .ph-table { display: grid; gap: 8px; margin-bottom: 1rem; }
+    .ph-table-head,
+    .ph-table-row {
+        display: grid;
+        grid-template-columns: minmax(140px, 1.2fr) 90px minmax(140px, 1.1fr) minmax(0, 1.2fr) auto;
+        gap: 12px;
+        align-items: center;
+    }
+    .ph-table-head {
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+        padding: 0 12px;
+    }
+    .ph-table-row {
+        padding: 14px 12px;
+        border: 1px solid var(--color-border);
+        border-radius: 14px;
+        background: var(--color-bg-card);
+    }
+    .ph-table-row strong { display: block; }
+    .ph-table-row small { color: var(--color-text-muted); }
+    .ph-add-bar { margin: 0.4rem 0 0.8rem; }
+    .ph-add-form { margin-bottom: 1rem; }
+    .ph-add-form p { margin: 0 0 12px; color: var(--color-text-muted); }
+    .ph-policy { display: grid; gap: 12px; margin-bottom: 1rem; }
+    .ph-policy-status { padding: 12px 14px; border-radius: 12px; }
+    .ph-policy-status.is-on { background: rgba(16, 185, 129, 0.1); }
+    .ph-policy-status.is-off { background: rgba(148, 163, 184, 0.14); }
+    .ph-policy-kicker {
+        margin: 0 0 4px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+    }
+    .ph-policy-status p { margin: 6px 0 0; line-height: 1.45; }
+    .ph-policy-actions .btn { min-width: 11rem; }
+    .ph-request-form { display: grid; gap: 10px; }
+    .ph-calendar-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    #travel-requests { padding-bottom: 88px; }
+    @media (max-width: 980px) {
+        .ph-workspace.dashboard-grid,
+        .ph-table-head,
+        .ph-table-row,
+        .ph-meta { grid-template-columns: 1fr; }
+        .ph-table-head { display: none; }
+        .ph-book-status { align-items: flex-start; }
+    }
+    [data-theme="dark"] .ph-book,
+    [data-theme="dark"] .ph-request,
+    [data-theme="dark"] .ph-policy,
+    [data-theme="dark"] .ph-add-form,
+    [data-theme="dark"] .ph-empty,
+    [data-theme="dark"] .ph-live,
+    [data-theme="dark"] .ph-table-row {
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+    }
+    [data-theme="dark"] .ph-note.is-ok { color: #6ee7b7; }
+    [data-theme="dark"] .ph-policy-status.is-on { background: rgba(16, 185, 129, 0.12); }
+</style>
+{% endblock %}

@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block title %}Find Verified Purohits | PurohitConnect{% endblock %}
+
+{% block extra_head %}
+<style>
+    [data-theme="dark"] .list-shell .card {
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(17, 24, 39, 0.88));
+    }
+    .pc-ritual-banner {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: var(--spacing-xl);
+        padding: 1.15rem 1.25rem;
+        border-radius: 20px;
+        background:
+            radial-gradient(circle at 100% 0%, rgba(251, 191, 36, 0.28), transparent 42%),
+            linear-gradient(135deg, #fffbeb 0%, #ffffff 55%);
+        border: 1px solid rgba(217, 119, 6, 0.22);
+        box-shadow: 0 16px 40px rgba(217, 119, 6, 0.08);
+    }
+    [data-theme="dark"] .pc-ritual-banner {
+        background:
+            radial-gradient(circle at 100% 0%, rgba(250, 204, 21, 0.18), transparent 42%),
+            linear-gradient(135deg, rgba(250, 204, 21, 0.08), rgba(15, 23, 42, 0.5));
+        border-color: rgba(250, 204, 21, 0.28);
+    }
+    .pc-ritual-kicker {
+        margin: 0 0 4px;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #b45309;
+    }
+    [data-theme="dark"] .pc-ritual-kicker { color: #fde68a; }
+    .pc-ritual-banner h2 { margin: 0 0 6px; color: var(--color-secondary); }
+    .pc-ritual-banner p { margin: 0; color: var(--color-text-muted); max-width: 42rem; }
+    .pc-ritual-back { white-space: nowrap; }
+    .purohit-card.is-ritual-match {
+        border-color: rgba(217, 119, 6, 0.28);
+        box-shadow: 0 12px 28px rgba(217, 119, 6, 0.08);
+    }
+    .pc-match-ritual {
+        margin-bottom: var(--spacing-md);
+        padding: 0.85rem 0.95rem;
+        border-radius: 14px;
+        background: rgba(217, 119, 6, 0.07);
+        border: 1px solid rgba(217, 119, 6, 0.14);
+        flex-grow: 1;
+    }
+    [data-theme="dark"] .pc-match-ritual {
+        background: rgba(250, 204, 21, 0.08);
+        border-color: rgba(250, 204, 21, 0.18);
+    }
+    .pc-match-kicker {
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #b45309;
+        margin-bottom: 4px;
+    }
+    [data-theme="dark"] .pc-match-kicker { color: #fde68a; }
+    .pc-match-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    .pc-match-title-row h4 { margin: 0; font-size: 1.05rem; }
+    .pc-match-price {
+        font-weight: 800;
+        color: var(--color-secondary);
+        white-space: nowrap;
+    }
+    .pc-match-meta {
+        margin: 6px 0 8px;
+        font-size: 0.85rem;
+        color: var(--color-text-muted);
+    }
+    .pc-match-meta i { width: 13px; height: 13px; }
+    .pc-card-actions {
+        border-top: 1px solid var(--color-border);
+        padding-top: var(--spacing-md);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-top: auto;
+    }
+    .purohit-card.is-ritual-match .pc-card-actions .btn-primary {
+        flex: 1 1 auto;
+        text-align: center;
+    }
+    .pc-venue-block { margin: 0; }
+    .pc-venue-caption {
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+        margin-bottom: 4px;
+    }
+    .pc-venues { display: flex; flex-wrap: wrap; gap: 6px; }
+    .pc-venue-chip {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 3px 8px; border-radius: 999px;
+        background: rgba(217, 119, 6, 0.1);
+        color: var(--color-secondary);
+        font-size: 0.72rem; font-weight: 700;
+    }
+    .pc-venue-chip i { width: 12px; height: 12px; }
+    .pc-coverage-note { margin: 8px 0 0; font-size: 0.78rem; color: var(--color-text-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container list-shell" style="padding: var(--spacing-2xl) var(--spacing-md);">
+    <div style="margin-bottom: var(--spacing-xl);">
+        <h1>Find a Purohit</h1>
+        <p style="color: var(--color-text-muted);">
+            {% if focus_puja %}
+                Showing purohits who offer {{ focus_puja.name }}. Your ritual stays selected on the next step.
+            {% else %}
+                Browse verified pandits and purohits for your spiritual needs.
+            {% endif %}
+        </p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr; gap: var(--spacing-xl); align-items: start;">
+        <style>
+            @media (min-width: 768px) {
+                .layout-grid {
+                    grid-template-columns: 280px 1fr !important;
+                }
+            }
+        </style>
+        <div class="layout-grid" style="display: grid; grid-template-columns: 1fr; gap: var(--spacing-xl); align-items: start;">
+            <!-- Filters Sidebar -->
+            <aside>
+                {% include 'components/filters_sidebar.html' %}
+            </aside>
+            
+            <!-- Main Content Area -->
+            <section>
+                <!-- HTMX Target for grid updates -->
+                <div id="purohit-grid">
+                    {% include 'purohits/partials/purohit_grid.html' %}
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}

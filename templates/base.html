@@ -1,0 +1,498 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PurohitConnect | Book Verified Pandits Online{% endblock %}</title>
+    <meta name="description" content="Book verified Purohits and Pandits for your household pujas, festivals, and ceremonies. Transparent pricing, authentic rituals.">
+    <meta name="keywords" content="Purohit, Pandit, online puja booking, Hindu rituals, Satyanarayan Puja, Griha Pravesh">
+    
+    <!-- Open Graph / SEO -->
+    <meta property="og:title" content="PurohitConnect | Sacred Ceremonies, Simplified">
+    <meta property="og:description" content="Book verified Purohits and Pandits for your household pujas, festivals, and ceremonies.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://purohitconnect.in">
+    <meta property="og:image" content="https://purohitconnect.in/static/images/og-image.jpg">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="{% static 'css/base.css' %}?v=csrfswitch1">
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    {% block extra_head %}{% endblock %}
+    
+    <!-- Theme Engine -->
+    <style id="theme-style">
+        [data-theme="dark"] {
+            --color-bg-main: #0B1120 !important;
+            --color-bg-card: #121A2B !important;
+            --color-text-main: #E5E7EB !important;
+            --color-text-muted: #94A3B8 !important;
+            --color-border: rgba(250, 204, 21, 0.18) !important;
+            --color-primary: #FACC15 !important;
+            --color-secondary: #B45309 !important;
+        }
+        [data-theme="light"] {
+            --color-bg-main: #F8FAFC !important;
+            --color-bg-card: #FFFFFF !important;
+            --color-text-main: #0F172A !important;
+            --color-text-muted: #475569 !important;
+            --color-border: rgba(15, 23, 42, 0.12) !important;
+            --color-primary: #D97706 !important;
+            --color-secondary: #9A3412 !important;
+        }
+        [data-theme="dark"] body { background-color: var(--color-bg-main) !important; color: var(--color-text-main) !important; }
+        [data-theme="light"] body { background-color: var(--color-bg-main) !important; color: var(--color-text-main) !important; }
+        [data-theme="dark"] .card { background-color: var(--color-bg-card) !important; border-color: var(--color-border) !important; }
+        [data-theme="light"] .card {
+            background: #FFFFFF !important;
+            background-image: none !important;
+            border-color: rgba(15, 23, 42, 0.12) !important;
+            color: #0F172A !important;
+        }
+        [data-theme="dark"] .navbar {
+            background: linear-gradient(180deg, rgba(2, 6, 23, 0.96), rgba(15, 23, 42, 0.92)) !important;
+            border-bottom: 1px solid var(--color-border) !important;
+        }
+        [data-theme="light"] .navbar {
+            background: #FFFFFF !important;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.12) !important;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06) !important;
+        }
+        [data-theme="light"] .navbar .brand,
+        [data-theme="light"] .navbar .brand-icon {
+            color: #D97706 !important;
+        }
+        [data-theme="light"] .navbar .pc-nav-item,
+        [data-theme="light"] .navbar .pc-nav-icon {
+            color: #64748B;
+        }
+        [data-theme="light"] .navbar .pc-nav-item:hover,
+        [data-theme="light"] .navbar .pc-nav-icon:hover {
+            color: #D97706;
+        }
+        [data-theme="light"] .navbar .pc-nav-item.is-active {
+            color: #111827;
+        }
+        [data-theme="dark"] .navbar .pc-nav-item {
+            color: #94A3B8;
+        }
+        [data-theme="dark"] .navbar .pc-nav-icon {
+            color: #E5E7EB;
+        }
+        [data-theme="dark"] .navbar .pc-nav-item:hover {
+            color: #FACC15;
+        }
+        [data-theme="dark"] .navbar .pc-nav-item.is-active {
+            color: #111827;
+        }
+        [data-theme="dark"] .footer {
+            background: linear-gradient(180deg, rgba(2, 6, 23, 0.86), rgba(15, 23, 42, 0.92)) !important;
+            color: var(--color-text-main) !important;
+            border-top-color: var(--color-border) !important;
+        }
+        [data-theme="light"] .footer {
+            background: #FFFFFF !important;
+            color: #0F172A !important;
+            border-top: 1px solid rgba(15, 23, 42, 0.12) !important;
+        }
+        [data-theme="light"] .footer .brand,
+        [data-theme="light"] .footer .brand-icon {
+            color: #D97706 !important;
+        }
+        [data-theme="light"] .footer h3 {
+            color: #0F172A !important;
+        }
+        [data-theme="light"] .footer p,
+        [data-theme="light"] .footer ul li a,
+        [data-theme="light"] .footer-bottom {
+            color: #475569 !important;
+        }
+        [data-theme="light"] .footer ul li a:hover {
+            color: #D97706 !important;
+        }
+        [data-theme="light"] .footer-bottom {
+            border-top-color: rgba(15, 23, 42, 0.12) !important;
+        }
+    </style>
+    <script>
+        (function() {
+            var pref = localStorage.getItem('theme') || 'dark';
+            if (pref !== 'light' && pref !== 'dark' && pref !== 'system') pref = 'dark';
+            var resolved = pref === 'system'
+                ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                : pref;
+            document.documentElement.setAttribute('data-theme-pref', pref);
+            document.documentElement.setAttribute('data-theme', resolved);
+        })();
+    </script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .swal2-popup {
+            border-radius: 20px !important;
+            font-family: var(--font-body) !important;
+            background: var(--color-bg-card) !important;
+            color: var(--color-text-main) !important;
+        }
+        .swal2-title { color: var(--color-text-main) !important; }
+        .swal2-html-container { color: var(--color-text-muted) !important; }
+
+        .reschedule-swal {
+            overflow: hidden !important;
+            border: 1px solid var(--color-border) !important;
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35) !important;
+        }
+        .reschedule-swal-title {
+            font-size: 1.35rem !important;
+            font-weight: 700 !important;
+            padding: 0 0 0.35rem !important;
+        }
+        .reschedule-swal-body {
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+        }
+        .reschedule-swal .swal2-actions {
+            gap: 0.65rem !important;
+            margin-top: 1.1rem !important;
+        }
+        .reschedule-swal-confirm,
+        .reschedule-swal-cancel {
+            border-radius: 12px !important;
+            font-weight: 600 !important;
+            padding: 0.7rem 1.2rem !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+        }
+        .rs-modal {
+            text-align: left;
+            width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .rs-current {
+            background: rgba(250, 204, 21, 0.08);
+            border: 1px solid rgba(250, 204, 21, 0.22);
+            border-radius: 14px;
+            padding: 0.85rem 1rem;
+            margin-bottom: 1rem;
+        }
+        .rs-current-label {
+            font-size: 0.72rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--color-text-muted);
+            font-weight: 700;
+            margin-bottom: 0.35rem;
+        }
+        .rs-current-puja {
+            color: var(--color-text-main);
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 0.2rem;
+        }
+        .rs-current-when {
+            color: var(--color-primary);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .rs-field {
+            margin-bottom: 0.85rem;
+        }
+        .rs-field label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--color-text-main);
+            margin-bottom: 0.4rem;
+        }
+        .rs-field label span {
+            font-weight: 500;
+            color: var(--color-text-muted);
+        }
+        .rs-input {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            margin: 0 !important;
+            height: auto !important;
+            min-height: 46px;
+            padding: 0.7rem 0.85rem !important;
+            border-radius: 12px !important;
+            border: 1px solid var(--color-border) !important;
+            background: var(--color-bg-main) !important;
+            color: var(--color-text-main) !important;
+            font-size: 0.95rem !important;
+            font-family: inherit !important;
+            box-shadow: none !important;
+        }
+        .rs-input:focus {
+            outline: none !important;
+            border-color: var(--color-primary) !important;
+            box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.16) !important;
+        }
+        [data-theme="light"] .rs-current {
+            background: rgba(217, 119, 6, 0.08);
+            border-color: rgba(217, 119, 6, 0.2);
+        }
+        .pc-flash-stack {
+            position: fixed;
+            top: 84px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(560px, calc(100vw - 24px));
+            display: grid;
+            gap: 10px;
+            z-index: 4200;
+            pointer-events: none;
+        }
+        .pc-flash {
+            pointer-events: auto;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 16px 16px 16px 18px;
+            border-radius: 20px;
+            border: 1px solid transparent;
+            background: #ffffff;
+            box-shadow: 0 22px 50px rgba(15, 23, 42, 0.2);
+            animation: pcFlashIn 0.35s ease;
+        }
+        @keyframes pcFlashIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: none; }
+        }
+        .pc-flash-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+        }
+        .pc-flash-icon i { width: 20px; height: 20px; }
+        .pc-flash-body { flex: 1; min-width: 0; padding-top: 1px; }
+        .pc-flash-kicker {
+            margin: 0 0 2px;
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .pc-flash-body p { margin: 0; font-size: 0.98rem; line-height: 1.4; font-weight: 600; }
+        .pc-flash-close {
+            background: none;
+            border: none;
+            color: var(--color-text-muted);
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+        }
+        .pc-flash-close:hover { background: rgba(15, 23, 42, 0.06); color: var(--color-text-main); }
+        .pc-flash.is-success { border-color: rgba(16, 185, 129, 0.28); background: linear-gradient(135deg, #ecfdf5, #ffffff 55%); }
+        .pc-flash.is-success .pc-flash-icon { background: rgba(16, 185, 129, 0.14); color: #047857; }
+        .pc-flash.is-success .pc-flash-kicker { color: #047857; }
+        .pc-flash.is-error { border-color: rgba(239, 68, 68, 0.28); background: linear-gradient(135deg, #fef2f2, #ffffff 55%); }
+        .pc-flash.is-error .pc-flash-icon { background: rgba(239, 68, 68, 0.12); color: #b91c1c; }
+        .pc-flash.is-error .pc-flash-kicker { color: #b91c1c; }
+        .pc-flash.is-warning { border-color: rgba(245, 158, 11, 0.35); background: linear-gradient(135deg, #fffbeb, #ffffff 55%); }
+        .pc-flash.is-warning .pc-flash-icon { background: rgba(245, 158, 11, 0.16); color: #b45309; }
+        .pc-flash.is-warning .pc-flash-kicker { color: #b45309; }
+        .pc-flash.is-info, .pc-flash.is-debug { border-color: rgba(217, 119, 6, 0.22); background: linear-gradient(135deg, #fff7ed, #ffffff 55%); }
+        .pc-flash.is-info .pc-flash-icon, .pc-flash.is-debug .pc-flash-icon { background: rgba(217, 119, 6, 0.14); color: #b45309; }
+        .pc-flash.is-info .pc-flash-kicker, .pc-flash.is-debug .pc-flash-kicker { color: #b45309; }
+        [data-theme="dark"] .pc-flash { box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35); }
+        [data-theme="dark"] .pc-flash.is-success { background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(15, 23, 42, 0.92)); }
+        [data-theme="dark"] .pc-flash.is-success .pc-flash-icon, [data-theme="dark"] .pc-flash.is-success .pc-flash-kicker { color: #6ee7b7; }
+        [data-theme="dark"] .pc-flash.is-error { background: linear-gradient(135deg, rgba(239, 68, 68, 0.16), rgba(15, 23, 42, 0.92)); }
+        [data-theme="dark"] .pc-flash.is-error .pc-flash-icon, [data-theme="dark"] .pc-flash.is-error .pc-flash-kicker { color: #fca5a5; }
+        [data-theme="dark"] .pc-flash.is-warning,
+        [data-theme="dark"] .pc-flash.is-info,
+        [data-theme="dark"] .pc-flash.is-debug {
+            background: linear-gradient(135deg, rgba(250, 204, 21, 0.12), rgba(15, 23, 42, 0.92));
+        }
+        [data-theme="dark"] .pc-flash.is-warning .pc-flash-icon,
+        [data-theme="dark"] .pc-flash.is-warning .pc-flash-kicker,
+        [data-theme="dark"] .pc-flash.is-info .pc-flash-icon,
+        [data-theme="dark"] .pc-flash.is-info .pc-flash-kicker,
+        [data-theme="dark"] .pc-flash.is-debug .pc-flash-icon,
+        [data-theme="dark"] .pc-flash.is-debug .pc-flash-kicker { color: #fde68a; }
+        [data-theme="dark"] .pc-flash-close:hover { background: rgba(250, 204, 21, 0.1); color: #fde68a; }
+        .pc-notif-panel {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 12px;
+            width: 360px;
+            background: var(--color-bg-card);
+            border: 1px solid var(--color-border);
+            border-radius: 20px;
+            box-shadow: 0 22px 48px rgba(15, 23, 42, 0.16);
+            z-index: 1000;
+            overflow: hidden;
+        }
+        .pc-notif-head {
+            padding: 16px 16px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #fff7ed, #ffffff 70%);
+            border-bottom: 1px solid var(--color-border);
+        }
+        .pc-notif-head h4 { margin: 0; font-size: 1rem; }
+        .pc-notif-head a {
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: var(--color-primary);
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: rgba(217, 119, 6, 0.1);
+        }
+        .pc-notif-item {
+            position: relative;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .pc-notif-item.is-unread { background: rgba(217, 119, 6, 0.06); }
+        .pc-notif-item a {
+            display: grid;
+            grid-template-columns: 36px 1fr;
+            gap: 12px;
+            padding: 14px 40px 14px 14px;
+            text-decoration: none;
+            color: inherit;
+        }
+        .pc-notif-item a:hover { background: rgba(217, 119, 6, 0.08); }
+        .pc-notif-mark {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            background: rgba(217, 119, 6, 0.12);
+            color: var(--color-primary);
+        }
+        .pc-notif-mark i { width: 16px; height: 16px; }
+        .pc-notif-item strong { display: block; font-size: 0.9rem; margin-bottom: 3px; }
+        .pc-notif-item p { margin: 0; font-size: 0.82rem; line-height: 1.4; color: var(--color-text-muted); }
+        .pc-notif-item time { display: block; margin-top: 6px; font-size: 0.72rem; color: var(--color-text-muted); }
+        .pc-notif-delete {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 8px;
+            background: none;
+            color: var(--color-text-muted);
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+        }
+        .pc-notif-delete:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+        .pc-notif-empty { padding: 36px 20px; text-align: center; color: var(--color-text-muted); font-size: 0.85rem; }
+        .pc-notif-empty i { width: 28px; height: 28px; display: block; margin: 0 auto 8px; opacity: 0.55; }
+        [data-theme="dark"] .pc-notif-head { background: linear-gradient(135deg, rgba(250, 204, 21, 0.1), rgba(15, 23, 42, 0.95)); }
+        [data-theme="dark"] .pc-notif-panel { box-shadow: 0 22px 48px rgba(0, 0, 0, 0.45); }
+    </style>
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    
+    {% include 'components/navbar.html' %}
+    
+    <main>
+        {% if messages %}
+        <div class="pc-flash-stack" role="status" aria-live="polite">
+            {% for message in messages %}
+            <article class="pc-flash is-{{ message.level_tag|default:'info' }}"
+                     x-data="{ show: true }"
+                     x-show="show"
+                     x-init="setTimeout(() => show = false, 7000)"
+                     x-transition.opacity.duration.250ms>
+                <div class="pc-flash-icon" aria-hidden="true">
+                    {% if message.level_tag == 'success' %}<i data-lucide="check-circle-2"></i>
+                    {% elif message.level_tag == 'error' %}<i data-lucide="alert-circle"></i>
+                    {% elif message.level_tag == 'warning' %}<i data-lucide="alert-triangle"></i>
+                    {% else %}<i data-lucide="sparkles"></i>{% endif %}
+                </div>
+                <div class="pc-flash-body">
+                    <p class="pc-flash-kicker">
+                        {% if message.level_tag == 'success' %}Done
+                        {% elif message.level_tag == 'error' %}Could not complete
+                        {% elif message.level_tag == 'warning' %}Please check
+                        {% else %}Note{% endif %}
+                    </p>
+                    <p>{{ message }}</p>
+                </div>
+                <button type="button" class="pc-flash-close" @click="show = false" aria-label="Dismiss">
+                    <i data-lucide="x"></i>
+                </button>
+            </article>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% block content %}
+        {% endblock %}
+    </main>
+    
+    {% include 'components/footer.html' %}
+    {% include 'components/support_bot.html' %}
+    
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+        (function syncCsrfAfterLiveRefresh() {
+            function readCookie(name) {
+                const parts = ('; ' + document.cookie).split('; ' + name + '=');
+                if (parts.length < 2) return '';
+                return decodeURIComponent(parts.pop().split(';').shift() || '');
+            }
+            function csrfToken() {
+                return readCookie('csrftoken');
+            }
+            function applyToken(token) {
+                if (!token) return;
+                document.querySelectorAll('input[name=csrfmiddlewaretoken]').forEach(function (el) {
+                    el.value = token;
+                });
+                document.body.setAttribute('hx-headers', JSON.stringify({ 'X-CSRFToken': token }));
+            }
+            function syncFromCookie() {
+                applyToken(csrfToken());
+            }
+            document.body.addEventListener('htmx:afterSwap', syncFromCookie);
+            document.body.addEventListener('htmx:afterOnLoad', syncFromCookie);
+            document.body.addEventListener('htmx:configRequest', function (event) {
+                const token = csrfToken();
+                if (token) event.detail.headers['X-CSRFToken'] = token;
+            });
+            document.addEventListener('submit', function (event) {
+                const token = csrfToken();
+                if (!token || !event.target || !event.target.querySelector) return;
+                const input = event.target.querySelector('input[name=csrfmiddlewaretoken]');
+                if (input) input.value = token;
+            }, true);
+        })();
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}Chat for Booking {{ booking.booking_id }} | PurohitConnect{% endblock %}
+
+{% block extra_head %}
+<style>
+    .chat-shell [style*="background: #25D366"] {
+        background: linear-gradient(135deg, #059669, #10b981) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container chat-shell" style="padding: var(--spacing-xl) var(--spacing-md); max-width: 700px;">
+    
+    <!-- Header -->
+    <div style="margin-bottom: var(--spacing-lg); display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+            <a href="{% if is_purohit_workspace %}{% url 'dashboard:purohit' %}{% else %}{% url 'dashboard:customer' %}{% endif %}"
+               class="pc-nav-icon"
+               style="width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--color-border); background: var(--color-bg-card);"
+               aria-label="Back to dashboard">
+                <i data-lucide="arrow-left" style="width: 20px; height: 20px;"></i>
+            </a>
+            <div>
+                <h2 style="margin: 0; font-size: 1.25rem;">Chat with {% if user.role == 'purohit' %}{{ booking.customer.username }}{% else %}{{ booking.purohit.name }}{% endif %}</h2>
+                <div style="font-size: 0.85rem; color: var(--color-text-muted); display: flex; align-items: center; gap: 8px;">
+                    <span style="background: var(--color-bg-main); padding: 2px 8px; border-radius: 4px; font-weight: 600; color: var(--color-secondary);">{{ booking.booking_id }}</span>
+                    <span>&bull;</span>
+                    <span>{{ booking.puja_package.puja.name }}</span>
+                </div>
+            </div>
+        </div>
+        
+        {% with phone=booking.purohit.profile.user.phone|default:'' %}
+        {% with wa_phone=phone|cut:'+' %}
+            {% if wa_phone %}
+                {% with wa_message="Hello! I have a question about booking "|add:booking.booking_id|add:"." %}
+                <a href="https://wa.me/{{ wa_phone }}?text={{ wa_message|urlencode }}" target="_blank" 
+                   style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 10px; background: #25D366; color: white; text-decoration: none; font-size: 0.9rem; font-weight: 600; box-shadow: 0 4px 10px rgba(37, 211, 102, 0.2);">
+                    <i data-lucide="phone" style="width: 16px; height: 16px;"></i> WhatsApp
+                </a>
+                {% endwith %}
+            {% else %}
+                <a href="#" target="_blank" 
+                   style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 10px; background: #25D366; color: white; text-decoration: none; font-size: 0.9rem; font-weight: 600; box-shadow: 0 4px 10px rgba(37, 211, 102, 0.2); opacity: 0.6; pointer-events: none;">
+                    <i data-lucide="phone" style="width: 16px; height: 16px;"></i> WhatsApp
+                </a>
+            {% endif %}
+        {% endwith %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Chat Window -->
+    <div style="background: var(--color-bg-card); border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); border: 1px solid var(--color-border); overflow: hidden; height: 600px; display: flex; flex-direction: column;">
+        
+        <!-- Messages Area -->
+        <div id="chat-window" 
+             hx-get="{% url 'dashboard:booking_chat' booking.booking_id %}" 
+             hx-trigger="every 5s" 
+             hx-select="#chat-messages-list" 
+             hx-target="#chat-messages-list" 
+             hx-on::after-settle="const win = document.getElementById('chat-window'); win.scrollTop = win.scrollHeight;"
+             style="flex-grow: 1; overflow-y: auto; padding: var(--spacing-xl); background: var(--color-bg-main); background-image: radial-gradient(var(--color-border) 1px, transparent 1px); background-size: 20px 20px; scroll-behavior: smooth;">
+            
+            <div id="chat-messages-list" style="display: flex; flex-direction: column; gap: 16px;">
+                {% include 'dashboard/partials/chat_messages.html' with chat_messages=chat_messages user=user %}
+            </div>
+            <div id="chat-anchor"></div>
+        </div>
+
+        <div style="padding: var(--spacing-lg); background: var(--color-bg-card); border-top: 1px solid var(--color-border);">
+            <form hx-post="{% url 'dashboard:booking_chat' booking.booking_id %}" 
+                  hx-target="#chat-messages-list" 
+                  hx-swap="beforeend" 
+                  hx-on::after-request="this.reset(); const win = document.getElementById('chat-window'); win.scrollTop = win.scrollHeight;"
+                  style="display: flex; gap: 12px; align-items: center; background: var(--color-bg-main); padding: 6px; border-radius: 16px; border: 1px solid var(--color-border);">
+                {% csrf_token %}
+                <input type="text" name="message" required placeholder="Type a message..." autocomplete="off"
+                       style="flex-grow: 1; background: transparent; border: none; padding: 10px 15px; outline: none; font-family: var(--font-body); font-size: 0.95rem; color: var(--color-text-main);">
+                <button type="submit" 
+                        style="width: 44px; height: 44px; border-radius: 12px; background: var(--color-primary); color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.2s;"
+                        onmouseover="this.style.transform='scale(1.05)'"
+                        onmouseout="this.style.transform='scale(1)'">
+                    <i data-lucide="send" style="width: 20px; height: 20px;"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Custom Scrollbar */
+    #chat-window::-webkit-scrollbar {
+        width: 6px;
+    }
+    #chat-window::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    #chat-window::-webkit-scrollbar-thumb {
+        background: var(--color-border);
+        border-radius: 10px;
+    }
+</style>
+
+<audio id="chat-ping" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" preload="auto"></audio>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const win = document.getElementById('chat-window');
+        if (win) win.scrollTop = win.scrollHeight;
+        
+        let lastMessageCount = document.querySelectorAll('#chat-messages-list > div').length;
+        const ping = document.getElementById('chat-ping');
+
+        // Watch for new messages (HTMX auto-refresh)
+        document.getElementById('chat-window').addEventListener('htmx:afterSettle', function(evt) {
+            const currentMessages = document.querySelectorAll('#chat-messages-list > div');
+            const currentCount = currentMessages.length;
+            
+            if (currentCount > lastMessageCount) {
+                // New message detected!
+                const lastMsg = currentMessages[currentMessages.length - 1];
+                const isIncoming = lastMsg.getAttribute('data-sender') !== '{{ user.id }}';
+                
+                if (isIncoming) {
+                    // Play sound only for incoming messages
+                    ping.currentTime = 0;
+                    ping.play().catch(e => console.log("Audio play blocked by browser"));
+                }
+                
+                // Scroll to bottom
+                win.scrollTop = win.scrollHeight;
+            }
+            lastMessageCount = currentCount;
+        });
+    });
+</script>
+{% endblock %}

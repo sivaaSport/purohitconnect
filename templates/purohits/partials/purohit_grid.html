@@ -1,0 +1,33 @@
+{% if focus_puja %}
+<header class="pc-ritual-banner">
+    <div class="pc-ritual-banner-copy">
+        <p class="pc-ritual-kicker">Booking this ritual</p>
+        <h2>{{ focus_puja.name }}</h2>
+        <p>These purohits already offer it. Book now, or open a profile — this puja stays selected.</p>
+    </div>
+    <a href="{% url 'pujas:list' %}?q={{ focus_puja.name|urlencode }}" class="btn btn-outline pc-ritual-back">Change ritual</a>
+</header>
+{% endif %}
+
+{% if purohits %}
+    <div class="pc-purohit-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--spacing-lg);">
+        {% for purohit in purohits %}
+            {% include 'components/purohit_card.html' with purohit=purohit %}
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card" style="text-align: center; padding: var(--spacing-2xl);">
+        <div style="width: 64px; height: 64px; background: var(--color-bg-main); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--spacing-md); color: var(--color-text-muted);">
+            <i data-lucide="search-x" style="width: 32px; height: 32px;"></i>
+        </div>
+        <h3>No Purohits Found</h3>
+        <p style="color: var(--color-text-muted); margin-top: 0.5rem;">
+            {% if focus_puja %}
+                No one is offering {{ focus_puja.name }} with the current filters.
+            {% else %}
+                Try adjusting your filters to find more results.
+            {% endif %}
+        </p>
+        <button class="btn btn-outline" style="margin-top: var(--spacing-lg);" onclick="document.getElementById('filter-form').reset(); document.getElementById('filter-form').dispatchEvent(new Event('submit'));">Clear Filters</button>
+    </div>
+{% endif %}

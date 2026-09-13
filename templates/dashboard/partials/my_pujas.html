@@ -1,0 +1,192 @@
+<section id="my-pujas" class="pc-catalog ph-chapter" aria-labelledby="my-pujas-heading">
+    <div class="pc-catalog-head">
+        <div>
+            <div class="pc-catalog-kicker">Your offerings</div>
+            <h2 id="my-pujas-heading">My Pujas</h2>
+            <p>Each card is how devotees book you. The price, hours, venues, and samagri choice here are what they see before they pay.</p>
+        </div>
+        <div class="pc-catalog-count">{{ packages|length }} offered</div>
+    </div>
+
+    <div class="pc-catalog-grid">
+        {% for package in packages %}
+        <article class="pc-offer" x-data="{ editing: false }">
+            <div class="pc-offer-top">
+                <div>
+                    <span class="pc-offer-cat">{{ package.puja.category.name }}</span>
+                    <h3>{{ package.puja.name }}</h3>
+                </div>
+                <div class="pc-offer-price">₹{{ package.price|floatformat:0 }}</div>
+            </div>
+
+            <div class="pc-offer-timeline" aria-hidden="true">
+                <span class="pc-offer-seg is-ritual">{{ package.get_duration_hours }}h ritual</span>
+                <span class="pc-offer-seg is-buffer">{{ package.get_buffer_minutes }}m rest</span>
+            </div>
+            <dl class="ph-meta">
+                <div>
+                    <dt>Devotees book</dt>
+                    <dd>{{ package.get_duration_hours }} hour{{ package.get_duration_hours|pluralize }} slot</dd>
+                </div>
+                <div>
+                    <dt>Rest after</dt>
+                    <dd>{{ package.get_buffer_minutes }} minutes blocked for you</dd>
+                </div>
+            </dl>
+
+            {% include 'pujas/partials/venue_chips.html' with items=package.get_venue_items note=package.venue_notes caption='You perform at' %}
+            {% if package.includes_samagri %}
+            <div class="pc-offer-chip is-samagri">Samagri included{% if package.samagri_price %} · +₹{{ package.samagri_price|floatformat:0 }}{% endif %}</div>
+            {% else %}
+            <div class="pc-offer-chip">Samagri not included{% if package.samagri_price %} · kit +₹{{ package.samagri_price|floatformat:0 }}{% endif %}</div>
+            {% endif %}
+
+            <div class="pc-offer-actions">
+                <button type="button" class="btn btn-primary pc-offer-btn" @click="editing = !editing" x-text="editing ? 'Close' : 'Adjust offering'"></button>
+                <form method="POST" action="{% url 'dashboard:manage_package' %}" onsubmit="return confirm('Remove {{ package.puja.name|escapejs }} from your offerings?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="package_id" value="{{ package.id }}">
+                    <button type="submit" class="btn btn-outline pc-offer-remove">Remove</button>
+                </form>
+            </div>
+
+            <div x-show="editing" x-cloak>
+            <form method="POST" action="{% url 'dashboard:manage_package' %}" class="pc-offer-editor">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update">
+                <input type="hidden" name="package_id" value="{{ package.id }}">
+
+                <div class="pc-field">
+                    <label for="pkg-price-{{ package.id }}">Your price</label>
+                    <div class="pc-field-control">
+                        <span>₹</span>
+                        <input id="pkg-price-{{ package.id }}" type="number" name="price" min="1" step="1" value="{{ package.price|floatformat:0 }}" required>
+                    </div>
+                </div>
+                <div class="pc-field">
+                    <label for="pkg-dur-{{ package.id }}">Ritual duration</label>
+                    <div class="pc-field-control">
+                        <input id="pkg-dur-{{ package.id }}" type="number" name="duration_hours" min="0.5" max="24" step="0.5" value="{{ package.get_duration_hours }}" required>
+                        <span>hours</span>
+                    </div>
+                </div>
+                <div class="pc-field">
+                    <label for="pkg-buf-{{ package.id }}">Rest after ritual</label>
+                    <div class="pc-field-control">
+                        <input id="pkg-buf-{{ package.id }}" type="number" name="buffer_minutes" min="0" max="180" step="15" value="{{ package.get_buffer_minutes }}">
+                        <span>min</span>
+                    </div>
+                </div>
+                <div class="pc-field">
+                    <label for="pkg-sam-{{ package.id }}">Samagri kit price</label>
+                    <div class="pc-field-control">
+                        <span>₹</span>
+                        <input id="pkg-sam-{{ package.id }}" type="number" name="samagri_price" min="0" step="1" value="{% if package.samagri_price %}{{ package.samagri_price|floatformat:0 }}{% endif %}" placeholder="0">
+                    </div>
+                </div>
+                <label class="pc-check">
+                    <input type="checkbox" name="includes_samagri" {% if package.includes_samagri %}checked{% endif %}>
+                    Samagri is included in the base price
+                </label>
+                {% include 'pujas/partials/venue_fields.html' with selected_venues=package.get_venues venue_notes=package.venue_notes note_id=package.id %}
+                <button type="submit" class="btn btn-primary pc-offer-save">Save changes</button>
+            </form>
+            </div>
+        </article>
+        {% empty %}
+        <div class="pc-offer pc-offer-empty">
+            <i data-lucide="sparkles"></i>
+            <h3>No offerings yet</h3>
+            <p>Add the rituals you actually perform. Your duration becomes the booking slot.</p>
+        </div>
+        {% endfor %}
+
+        <article class="pc-offer pc-offer-add" x-data="{ open: {{ packages|yesno:'false,true' }} }">
+            <button type="button" class="pc-offer-add-trigger" @click="open = !open" :aria-expanded="open.toString()">
+                <span class="pc-offer-plus">+</span>
+                <span>
+                    <strong x-text="open ? 'Hide add form' : 'Add a ritual'"></strong>
+                    <small>Pick from the catalog, then set your hours and price</small>
+                </span>
+            </button>
+
+            {% if available_pujas %}
+            <div x-show="open" x-cloak>
+            <form method="POST" action="{% url 'dashboard:manage_package' %}" class="pc-offer-editor is-add">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add">
+                <div class="pc-field pc-field-full">
+                    <label for="add-puja-select">Ritual</label>
+                    <select id="add-puja-select" name="puja_id" required>
+                        <option value="">Choose a puja…</option>
+                        {% for puja in available_pujas %}
+                        <option value="{{ puja.id }}" data-duration="{{ puja.base_duration_hours }}" data-venues="{{ puja.typical_venues }}">{{ puja.category.name }} — {{ puja.name }} (suggested {{ puja.base_duration_hours }}h)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="pc-field">
+                    <label for="add-price">Your price</label>
+                    <div class="pc-field-control">
+                        <span>₹</span>
+                        <input id="add-price" type="number" name="price" min="1" step="1" placeholder="2500" required>
+                    </div>
+                </div>
+                <div class="pc-field">
+                    <label for="add-duration-hours">Your duration</label>
+                    <div class="pc-field-control">
+                        <input id="add-duration-hours" type="number" name="duration_hours" min="0.5" max="24" step="0.5" placeholder="4" required>
+                        <span>hours</span>
+                    </div>
+                </div>
+                <div class="pc-field">
+                    <label for="add-buffer">Rest after ritual</label>
+                    <div class="pc-field-control">
+                        <input id="add-buffer" type="number" name="buffer_minutes" min="0" max="180" step="15" value="30">
+                        <span>min</span>
+                    </div>
+                </div>
+                <div class="pc-field">
+                    <label for="add-samagri-price">Samagri kit price</label>
+                    <div class="pc-field-control">
+                        <span>₹</span>
+                        <input id="add-samagri-price" type="number" name="samagri_price" min="0" step="1" placeholder="optional">
+                    </div>
+                </div>
+                <label class="pc-check pc-field-full">
+                    <input type="checkbox" name="includes_samagri">
+                    Samagri is included in the base price
+                </label>
+                {% include 'pujas/partials/venue_fields.html' with selected_venues='' venue_notes='' note_id='add-venue-note' %}
+                <div class="pc-field pc-field-full">
+                    <label for="add-note">How you perform it <span>(optional)</span></label>
+                    <textarea id="add-note" name="custom_description" rows="2" placeholder="Any note devotees should know"></textarea>
+                </div>
+                <p class="pc-offer-hint pc-field-full">Catalog duration is only a suggestion. Change it to the hours you actually need.</p>
+                <button type="submit" class="btn btn-primary pc-offer-save">Add to my offerings</button>
+            </form>
+            </div>
+            <script>
+            (function () {
+                var select = document.getElementById('add-puja-select');
+                var duration = document.getElementById('add-duration-hours');
+                if (!select || !duration) return;
+                select.addEventListener('change', function () {
+                    var opt = select.options[select.selectedIndex];
+                    var suggested = opt && opt.getAttribute('data-duration');
+                    if (suggested) duration.value = suggested;
+                    var venues = (opt && opt.getAttribute('data-venues') || '').split(',');
+                    document.querySelectorAll('.pc-offer-add input[name="venues"]').forEach(function (box) {
+                        box.checked = venues.indexOf(box.value) !== -1;
+                    });
+                });
+            })();
+            </script>
+            {% else %}
+            <p class="pc-offer-hint" x-show="open" x-cloak>
+                {% if packages %}You already offer every puja in the catalog.{% else %}No pujas are in the catalog yet. Ask admin to seed pujas.{% endif %}
+            </p>
+            {% endif %}
+        </article>
+    </div>
+</section>

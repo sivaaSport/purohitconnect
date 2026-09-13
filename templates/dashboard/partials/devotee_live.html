@@ -1,0 +1,136 @@
+<div id="devotee-live-root"
+     hx-get="{% url 'dashboard:customer' %}"
+     hx-trigger="devotee-refresh from:body"
+     hx-swap="outerHTML">
+    <section class="dv-home">
+        <div class="dv-hero">
+            <div>
+                <p class="dv-kicker">Your home</p>
+                <h1>Namaste, {{ user.first_name|default:user.get_full_name|default:user.username }}</h1>
+                <p class="dv-lead">
+                    {% if ongoing_booking %}
+                        A ritual is happening now — {{ ongoing_booking.puja_package.puja.name }}.
+                    {% elif next_booking %}
+                        {% if days_until_next == 0 %}
+                            Today: {{ next_booking.puja_package.puja.name }}{% if next_booking.event_time %} at {{ next_booking.event_time|time:"H:i" }}{% endif %}.
+                        {% elif days_until_next == 1 %}
+                            Tomorrow: {{ next_booking.puja_package.puja.name }} with {{ next_booking.purohit.name }}.
+                        {% else %}
+                            Next ritual in {{ days_until_next }} days — {{ next_booking.puja_package.puja.name }}.
+                        {% endif %}
+                    {% else %}
+                        Book a verified purohit for your next ceremony. Price and time stay clear before you pay.
+                    {% endif %}
+                </p>
+            </div>
+            <div class="dv-hero-actions">
+                <a href="{% url 'pujas:list' %}" class="btn btn-primary">Book a puja</a>
+                <a href="{% url 'purohits:list' %}" class="btn btn-outline">Find a purohit</a>
+            </div>
+        </div>
+        <div class="dv-stats">
+            <div class="dv-stat"><strong>{{ upcoming_count }}</strong><span>Upcoming</span></div>
+            <div class="dv-stat"><strong>{{ awaiting_payment_count }}</strong><span>Awaiting payment</span></div>
+            <div class="dv-stat"><strong>{{ pending_travel_count }}</strong><span>Travel waiting</span></div>
+            <div class="dv-stat"><strong>{{ completed_count }}</strong><span>Completed</span></div>
+        </div>
+        <nav class="ph-jump" aria-label="Dashboard sections">
+            <a href="#my-bookings">Bookings</a>
+            <a href="#sacred-calendar">Calendar</a>
+            <a href="#travel-requests">Travel</a>
+            <a href="#browse-pujas">Browse</a>
+        </nav>
+    </section>
+
+    {% if review_prompt %}
+    <section class="ph-review-ask" aria-label="Review your ritual" data-review-booking="{{ review_prompt.booking_id }}" data-review-purohit="{{ review_prompt.purohit_name }}">
+        <div>
+            <p class="dv-kicker">Ritual complete</p>
+            <h2>{{ review_prompt.puja_name }}</h2>
+            <p>Please share a short review of {{ review_prompt.purohit_name }}. It helps other families choose with confidence.</p>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="openReviewModal('{{ review_prompt.booking_id|escapejs }}', '{{ review_prompt.purohit_name|escapejs }}')">Write a review</button>
+    </section>
+    {% endif %}
+
+    {% if next_booking and not ongoing_booking %}
+    <div class="dv-next">
+        <div>
+            <div class="dv-next-when">
+                {% if days_until_next == 0 %}Today{% elif days_until_next == 1 %}Tomorrow{% else %}{{ next_booking.event_date|date:"D, d M" }}{% endif %}
+                {% if next_booking.event_time %} · {{ next_booking.event_time|time:"H:i" }}{% endif %}
+            </div>
+            <h2 style="margin: 0 0 0.25rem; font-size: 1.3rem;">{{ next_booking.puja_package.puja.name }}</h2>
+            <p style="margin: 0; color: var(--color-text-muted); font-size: 0.92rem;">
+                With {{ next_booking.purohit.name }}
+                {% if next_booking.area %} · {{ next_booking.area.name }}{% endif %}
+            </p>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <a href="{% url 'dashboard:booking_chat' next_booking.booking_id %}" class="btn btn-outline">Message purohit</a>
+            {% if next_booking.payment_status == 'pending' %}
+            <a href="{% url 'bookings:booking_payment' next_booking.booking_id %}" class="btn btn-primary">Pay now</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if ongoing_booking %}
+    <section class="ph-live" aria-label="Live ritual">
+        <div class="ph-live-copy">
+            <p class="ph-live-kicker">Live ritual · started {{ ongoing_booking.started_at|time:"H:i" }}</p>
+            <h2>{{ ongoing_booking.puja_package.puja.name }}</h2>
+            <p>With {{ ongoing_booking.purohit.name }}{% if ongoing_booking.get_venue_label %} · {{ ongoing_booking.get_venue_label }}{% endif %}</p>
+        </div>
+        <div>
+            <p class="dv-kicker">Done code — share when finished</p>
+            <div class="ph-live-code ph-key-row">
+                {% for digit in ongoing_booking.complete_code %}
+                <span class="ph-key">{{ digit }}</span>
+                {% endfor %}
+            </div>
+            <a href="{% url 'dashboard:booking_chat' ongoing_booking.booking_id %}" class="btn btn-primary" style="margin-top:10px;">Open chat</a>
+        </div>
+    </section>
+    {% endif %}
+
+    <div class="ph-workspace">
+        {% include 'dashboard/partials/devotee_bookings.html' %}
+        <aside id="sacred-calendar" class="card ph-calendar">
+            {% include 'components/calendar_styles.html' %}
+            <div class="ph-calendar-head">
+                <div>
+                    <p class="dv-kicker">Your time</p>
+                    <h2>Your month</h2>
+                    <p style="margin: 4px 0 0; font-size: 0.8rem; color: var(--color-text-muted);">Gold days are booked rituals.</p>
+                </div>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                    <a href="?cal_year={{ cal_prev_year }}&cal_month={{ cal_prev_month }}#sacred-calendar" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;">‹</a>
+                    <strong>{{ cal_month_label }}</strong>
+                    <a href="?cal_year={{ cal_next_year }}&cal_month={{ cal_next_month }}#sacred-calendar" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;">›</a>
+                </div>
+            </div>
+            <div class="pc-cal-grid pc-cal-head">
+                <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
+            </div>
+            <div class="pc-cal-grid">
+                {% for week in devotee_calendar_weeks %}
+                    {% for day in week %}
+                        {% if day.in_month %}
+                        <div class="pc-cal-day {% if day.has_booking %}status-partial{% elif day.is_past %}status-past dv-idle{% else %}dv-idle{% endif %} {% if day.is_today %}is-today{% endif %}"
+                             style="cursor: default; flex-direction: column; gap: 1px; font-size: 0.72rem;"
+                             title="{% for b in day.bookings %}{{ b.puja_package.puja.name }}{% if b.event_time %} at {{ b.event_time|time:'H:i' }}{% endif %}{% if not forloop.last %}; {% endif %}{% empty %}No booking{% endfor %}">
+                            <span style="font-weight: 800;">{{ day.date.day }}</span>
+                            {% if day.has_booking %}
+                            <span style="font-size: 0.58rem; opacity: 0.9;">{% with day.bookings.0 as first %}{% if first.event_time %}{{ first.event_time|time:"H:i" }}{% else %}Puja{% endif %}{% endwith %}</span>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <div></div>
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        </aside>
+    </div>
+</div>

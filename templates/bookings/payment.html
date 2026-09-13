@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load l10n %}
+
+{% block title %}Complete Booking Payment - PurohitConnect{% endblock %}
+
+{% block extra_head %}
+<style>
+    .pay-shell {
+        max-width: 560px;
+        margin: 0 auto;
+        padding: var(--spacing-2xl) var(--spacing-md);
+    }
+    [data-theme="dark"] .pay-shell .card {
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(17, 24, 39, 0.88));
+    }
+    [data-theme="light"] .pay-shell .card {
+        background: #FFFFFF;
+        border-color: rgba(15, 23, 42, 0.12);
+    }
+    .pay-detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 1rem;
+        padding: 0.65rem 0;
+        border-bottom: 1px solid var(--color-border);
+    }
+    .pay-detail-row:last-child {
+        border-bottom: none;
+    }
+    .pay-detail-row span { color: var(--color-text-muted); }
+    .pay-detail-row strong { text-align: right; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pay-shell">
+    <div style="text-align: center; margin-bottom: var(--spacing-xl);">
+        <div style="width: 56px; height: 56px; margin: 0 auto var(--spacing-md); border-radius: 50%; display: grid; place-items: center; background: rgba(16, 185, 129, 0.14); color: #10B981;">
+            <i data-lucide="lock" style="width: 28px; height: 28px;"></i>
+        </div>
+        <h1 style="margin-bottom: 0.35rem; font-size: 1.85rem;">Complete Payment</h1>
+        <p style="color: var(--color-text-muted); margin: 0;">
+            {% if is_mock_payment %}
+                Local test checkout — Razorpay keys are not configured
+            {% else %}
+                Secure checkout powered by Razorpay
+            {% endif %}
+        </p>
+    </div>
+
+    {% if is_mock_payment %}
+    <div class="card" style="margin-bottom: var(--spacing-lg); border-color: rgba(250, 204, 21, 0.35);">
+        <div style="font-weight: 700; color: var(--color-primary); margin-bottom: 0.35rem;">Development mode</div>
+        <p style="margin: 0; color: var(--color-text-muted); font-size: 0.92rem;">
+            No real money will be charged. Click the button below to simulate a successful payment.
+            Add real <code>RAZORPAY_KEY_ID</code> / <code>RAZORPAY_KEY_SECRET</code> in <code>.env</code> for live checkout.
+        </p>
+    </div>
+    {% endif %}
+
+    <div class="card" style="margin-bottom: var(--spacing-lg);">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-md); border-bottom: 1px solid var(--color-border);">
+            <h2 style="margin: 0; font-size: 1.15rem;">Payment Summary</h2>
+            <span style="font-family: monospace; font-size: 0.85rem; color: var(--color-text-muted);">{{ booking.booking_id }}</span>
+        </div>
+
+        <div class="pay-detail-row">
+            <span>Service</span>
+            <strong>{{ booking.puja_package.puja.name }}</strong>
+        </div>
+
+        {% if is_partial_payment %}
+        <div class="pay-detail-row">
+            <span>Paid from Wallet</span>
+            <strong style="color: #10B981;">₹{{ wallet_amount|floatformat:"0" }}</strong>
+        </div>
+        <div class="pay-detail-row">
+            <span>Pay Now</span>
+            <strong style="color: var(--color-primary); font-size: 1.25rem;">₹{{ amount|floatformat:"0" }}</strong>
+        </div>
+        <div class="pay-detail-row">
+            <span>Booking Total</span>
+            <strong>₹{{ booking.total_amount|floatformat:"0" }}</strong>
+        </div>
+        <div style="margin-top: var(--spacing-md); padding: 0.75rem 0.9rem; border-radius: var(--radius-md); background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.28); color: var(--color-text-muted); font-size: 0.9rem;">
+            ₹{{ wallet_amount|floatformat:"0" }} has been reserved from your wallet. Complete the remaining payment to confirm.
+        </div>
+        {% else %}
+        <div class="pay-detail-row">
+            <span>Amount Due</span>
+            <strong style="color: var(--color-primary); font-size: 1.45rem;">₹{{ amount|floatformat:"0" }}</strong>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <form id="payment-form" method="POST" action="{% url 'bookings:verify_booking_payment' booking.booking_id %}">
+            {% csrf_token %}
+            <input type="hidden" id="razorpay_order_id" name="razorpay_order_id" value="{{ razorpay_order_id }}">
+            <input type="hidden" id="razorpay_payment_id" name="razorpay_payment_id"{% if is_mock_payment %} value="pay_mock_{{ booking.booking_id }}"{% endif %}>
+            <input type="hidden" id="razorpay_signature" name="razorpay_signature"{% if is_mock_payment %} value="mock_signature"{% endif %}>
+
+            {% if is_mock_payment %}
+            <button id="mock-pay-button" type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.95rem 1.25rem; font-size: 1.05rem;">
+                Complete Test Payment · ₹{{ amount|floatformat:"0" }}
+            </button>
+            {% else %}
+            <button id="rzp-button" type="button" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.95rem 1.25rem; font-size: 1.05rem;">
+                Pay ₹{{ amount|floatformat:"0" }} with Razorpay
+            </button>
+            {% endif %}
+        </form>
+
+        <div style="margin-top: var(--spacing-md); text-align: center;">
+            <a href="{% url 'bookings:booking_payment' booking.booking_id %}" class="btn btn-outline" style="width: 100%; justify-content: center;">
+                Change Payment Method
+            </a>
+        </div>
+
+        <p style="margin: var(--spacing-md) 0 0; text-align: center; font-size: 0.85rem; color: var(--color-text-muted);">
+            {% if is_mock_payment %}
+                Simulated payment for local development only.
+            {% else %}
+                Your payment details are encrypted and never stored on PurohitConnect.
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+{% if not is_mock_payment %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const rzpButton = document.getElementById('rzp-button');
+    const paymentForm = document.getElementById('payment-form');
+    const amountPaise = Math.round({{ amount|unlocalize }} * 100);
+
+    const options = {
+        key: '{{ razorpay_key }}',
+        amount: amountPaise,
+        currency: 'INR',
+        name: 'PurohitConnect',
+        description: 'Booking Payment - {{ booking.booking_id }}',
+        order_id: '{{ razorpay_order_id }}',
+        handler: function(response) {
+            document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id;
+            document.getElementById('razorpay_signature').value = response.razorpay_signature;
+            paymentForm.submit();
+        },
+        prefill: {
+            name: '{{ user.get_full_name|default:user.username|escapejs }}',
+            email: '{{ user.email|default:""|escapejs }}',
+            contact: '{{ user.phone|default:""|escapejs }}'
+        },
+        theme: {
+            color: '#D97706'
+        },
+        modal: {
+            ondismiss: function() {}
+        }
+    };
+
+    const rzp = new Razorpay(options);
+
+    rzpButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        rzp.open();
+    });
+
+    setTimeout(function() {
+        rzpButton.click();
+    }, 500);
+});
+</script>
+{% endif %}
+{% endblock %}

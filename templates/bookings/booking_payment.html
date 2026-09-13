@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Choose Payment Method - PurohitConnect{% endblock %}
+
+{% block extra_head %}
+<style>
+    .pay-shell {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: var(--spacing-2xl) var(--spacing-md);
+    }
+    [data-theme="dark"] .pay-shell .card {
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(17, 24, 39, 0.88));
+    }
+    [data-theme="light"] .pay-shell .card {
+        background: #FFFFFF;
+        border-color: rgba(15, 23, 42, 0.12);
+    }
+    .pay-detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 1rem;
+        padding: 0.65rem 0;
+        border-bottom: 1px solid var(--color-border);
+    }
+    .pay-detail-row:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    .pay-detail-row span {
+        color: var(--color-text-muted);
+        font-size: 0.95rem;
+    }
+    .pay-detail-row strong {
+        text-align: right;
+        color: var(--color-text-main);
+    }
+    .pay-option {
+        position: relative;
+        display: block;
+        margin-bottom: var(--spacing-md);
+        cursor: pointer;
+    }
+    .pay-option input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+    .pay-option-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1.1rem 1.2rem;
+        border: 2px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        background: var(--color-bg-main);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+    .pay-option input:checked + .pay-option-card {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.18);
+        background: rgba(250, 204, 21, 0.06);
+    }
+    .pay-option.is-disabled {
+        cursor: not-allowed;
+        opacity: 0.72;
+    }
+    .pay-option.is-disabled .pay-option-card {
+        pointer-events: none;
+    }
+    .pay-radio {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: 2px solid var(--color-border);
+        flex-shrink: 0;
+        margin-top: 2px;
+        display: grid;
+        place-items: center;
+    }
+    .pay-option input:checked + .pay-option-card .pay-radio {
+        border-color: var(--color-primary);
+        background: var(--color-primary);
+        box-shadow: inset 0 0 0 3px var(--color-bg-card);
+    }
+    .pay-option-body {
+        flex: 1;
+        min-width: 0;
+    }
+    .pay-option-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.25rem;
+    }
+    .pay-option-title strong {
+        font-size: 1.05rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+    }
+    .pay-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: rgba(250, 204, 21, 0.14);
+        color: var(--color-primary);
+        border: 1px solid rgba(250, 204, 21, 0.28);
+    }
+    .pay-warn {
+        margin-top: 0.65rem;
+        padding: 0.65rem 0.8rem;
+        border-radius: var(--radius-md);
+        background: rgba(245, 158, 11, 0.12);
+        border: 1px solid rgba(245, 158, 11, 0.28);
+        color: var(--color-text-muted);
+        font-size: 0.85rem;
+    }
+    .pay-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-top: var(--spacing-lg);
+    }
+    .pay-actions .btn {
+        width: 100%;
+        justify-content: center;
+        padding: 0.9rem 1.25rem;
+        font-size: 1.05rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pay-shell">
+    <div style="text-align: center; margin-bottom: var(--spacing-xl);">
+        <div style="width: 56px; height: 56px; margin: 0 auto var(--spacing-md); border-radius: 50%; display: grid; place-items: center; background: rgba(250, 204, 21, 0.14); color: var(--color-primary);">
+            <i data-lucide="credit-card" style="width: 28px; height: 28px;"></i>
+        </div>
+        <h1 style="margin-bottom: 0.35rem; font-size: 1.85rem;">Choose Payment Method</h1>
+        <p style="color: var(--color-text-muted); margin: 0;">Complete payment to confirm your booking</p>
+    </div>
+
+    <div class="card" style="margin-bottom: var(--spacing-lg);">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-md); border-bottom: 1px solid var(--color-border);">
+            <h2 style="margin: 0; font-size: 1.15rem;">Booking Details</h2>
+            <span style="font-family: monospace; font-size: 0.85rem; color: var(--color-text-muted);">{{ booking.booking_id }}</span>
+        </div>
+        <div>
+            <div class="pay-detail-row">
+                <span>Service</span>
+                <strong>{{ booking.puja_package.puja.name }}</strong>
+            </div>
+            <div class="pay-detail-row">
+                <span>Purohit</span>
+                <strong>{{ booking.purohit.name }}</strong>
+            </div>
+            <div class="pay-detail-row">
+                <span>Event Date</span>
+                <strong>{{ booking.event_date|date:"M d, Y" }}{% if booking.event_time %} · {{ booking.event_time }}{% endif %}</strong>
+            </div>
+            <div class="pay-detail-row" style="padding-top: 0.9rem;">
+                <span style="font-weight: 600; color: var(--color-text-main);">Total Amount</span>
+                <strong style="font-size: 1.45rem; color: var(--color-primary);">₹{{ total_amount|floatformat:"0" }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" id="payment-form" class="card">
+        {% csrf_token %}
+        <h2 style="margin: 0 0 var(--spacing-md); font-size: 1.15rem;">Select Payment Method</h2>
+
+        <label class="pay-option {% if not payment_options.wallet.available %}is-disabled{% endif %}">
+            <input type="radio" name="payment_method" value="wallet" id="wallet_payment"
+                   {% if not payment_options.wallet.available %}disabled{% endif %}>
+            <div class="pay-option-card">
+                <span class="pay-radio" aria-hidden="true"></span>
+                <div class="pay-option-body">
+                    <div class="pay-option-title">
+                        <strong><i data-lucide="wallet" style="width: 18px; height: 18px;"></i> Pay from Wallet</strong>
+                        <span class="pay-badge">Balance: ₹{{ payment_options.wallet.balance|floatformat:"0" }}</span>
+                    </div>
+                    <p style="margin: 0; color: var(--color-text-muted); font-size: 0.9rem;">{{ payment_options.wallet.description }}</p>
+                    {% if not payment_options.wallet.available %}
+                    <div class="pay-warn">
+                        Insufficient wallet balance. Need ₹{{ payment_options.wallet.shortfall|floatformat:"0" }} more.
+                        <a href="{% url 'accounts:wallet_topup' %}" style="color: var(--color-primary); font-weight: 600; margin-left: 0.25rem;">Top up wallet</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </label>
+
+        {% if payment_options.mixed.available %}
+        <label class="pay-option">
+            <input type="radio" name="payment_method" value="mixed" id="mixed_payment">
+            <div class="pay-option-card">
+                <span class="pay-radio" aria-hidden="true"></span>
+                <div class="pay-option-body">
+                    <div class="pay-option-title">
+                        <strong><i data-lucide="coins" style="width: 18px; height: 18px;"></i> Split Payment</strong>
+                        <span class="pay-badge">Wallet + Razorpay</span>
+                    </div>
+                    <p style="margin: 0; color: var(--color-text-muted); font-size: 0.9rem;">{{ payment_options.mixed.description }}</p>
+                    <div style="margin-top: 0.55rem; display: flex; gap: 0.75rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--color-text-muted);">
+                        <span>Wallet: <strong style="color: var(--color-text-main);">₹{{ payment_options.mixed.wallet_amount|floatformat:"0" }}</strong></span>
+                        <span>Razorpay: <strong style="color: var(--color-text-main);">₹{{ payment_options.mixed.razorpay_amount|floatformat:"0" }}</strong></span>
+                    </div>
+                </div>
+            </div>
+        </label>
+        {% endif %}
+
+        <label class="pay-option">
+            <input type="radio" name="payment_method" value="razorpay" id="razorpay_payment" checked>
+            <div class="pay-option-card">
+                <span class="pay-radio" aria-hidden="true"></span>
+                <div class="pay-option-body">
+                    <div class="pay-option-title">
+                        <strong><i data-lucide="shield-check" style="width: 18px; height: 18px;"></i> Pay with Razorpay</strong>
+                        <span class="pay-badge">UPI · Cards · NetBanking</span>
+                    </div>
+                    <p style="margin: 0; color: var(--color-text-muted); font-size: 0.9rem;">{{ payment_options.razorpay.description }}</p>
+                </div>
+            </div>
+        </label>
+
+        <div class="pay-actions">
+            <button type="submit" class="btn btn-primary">
+                Proceed to Payment
+            </button>
+            <a href="{% url 'dashboard:customer' %}" class="btn btn-outline">Cancel</a>
+        </div>
+
+        <p style="margin: var(--spacing-md) 0 0; text-align: center; font-size: 0.85rem; color: var(--color-text-muted);">
+            <i data-lucide="lock" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"></i>
+            Secure checkout · Need balance?
+            <a href="{% url 'accounts:wallet_topup' %}" style="color: var(--color-primary); font-weight: 600;">Add money to wallet</a>
+        </p>
+    </form>
+</div>
+{% endblock %}

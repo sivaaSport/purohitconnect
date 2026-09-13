@@ -1,0 +1,6 @@
+{% if user.is_authenticated and has_dual_workspace %}
+<div class="pc-workspace-switch" title="Same account. Switch what you are doing.">
+    <a href="{% url 'accounts:switch_workspace' %}?workspace=devotee" class="{% if is_devotee_workspace %}is-active{% endif %}">Devotee</a>
+    <a href="{% url 'accounts:switch_workspace' %}?workspace=purohit" class="{% if is_purohit_workspace %}is-active{% endif %}">Purohit</a>
+</div>
+{% endif %}

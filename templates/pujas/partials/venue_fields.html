@@ -1,0 +1,17 @@
+<fieldset class="pc-venue-fields">
+    <legend>Where do you perform this?</legend>
+    <p class="pc-offer-hint">The catalog lists the usual place. Tick every place you actually perform this — devotees see your list, not just the catalog default.</p>
+    <div class="pc-venue-options">
+        {% for code, label in venue_choices %}
+        <label class="pc-check">
+            <input type="checkbox" name="venues" value="{{ code }}"
+                   {% if code in selected_venues %}checked{% endif %}>
+            {{ label }}
+        </label>
+        {% endfor %}
+    </div>
+    <div class="pc-field pc-field-full">
+        <label for="venue-note-{{ note_id }}">Place note <span>(optional)</span></label>
+        <input id="venue-note-{{ note_id }}" type="text" name="venue_notes" maxlength="240" value="{{ venue_notes }}" placeholder="e.g. Trimbakeshwar only, or I travel to Gaya">
+    </div>
+</fieldset>

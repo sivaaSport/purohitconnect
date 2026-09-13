@@ -1,0 +1,63 @@
+<footer class="footer">
+    <div class="container">
+        <div class="footer-content">
+            <div>
+                <a href="/" class="brand" style="margin-bottom: 1rem;">
+                    <i data-lucide="flame" class="brand-icon"></i>
+                    PurohitConnect
+                </a>
+                <p style="color: var(--color-text-muted);">Connecting devotees with the divine. Book verified Purohits for your sacred ceremonies.</p>
+            </div>
+            
+            <div>
+                <h3>Quick Links</h3>
+                <ul>
+                    {% if user.is_authenticated and is_purohit_workspace %}
+                    <li><a href="{% url 'dashboard:purohit' %}">Incoming bookings</a></li>
+                    <li><a href="{% url 'dashboard:purohit' %}#my-pujas">My Pujas</a></li>
+                    <li><a href="{% url 'dashboard:purohit' %}#calendar">Calendar</a></li>
+                    <li><a href="{% url 'accounts:wallet_dashboard' %}">Earnings</a></li>
+                    {% else %}
+                    <li><a href="{% url 'purohits:list' %}">Find a Purohit</a></li>
+                    <li><a href="{% url 'pujas:list' %}">Browse Pujas</a></li>
+                    {% if user.is_authenticated %}
+                    <li><a href="{% url 'dashboard:customer' %}">My Bookings</a></li>
+                    <li><a href="{% url 'accounts:wallet_dashboard' %}">Wallet</a></li>
+                    {% else %}
+                    <li><a href="{% url 'core:about' %}">How it Works</a></li>
+                    <li><a href="{% url 'accounts:login' %}">Login</a></li>
+                    {% endif %}
+                    {% endif %}
+                </ul>
+            </div>
+            
+            <div>
+                <h3>Popular Pujas</h3>
+                <ul>
+                    <li><a href="{% url 'pujas:list' %}?q=Satyanarayan">Satyanarayan Puja</a></li>
+                    <li><a href="{% url 'pujas:list' %}?q=Griha+Pravesh">Griha Pravesh</a></li>
+                    <li><a href="{% url 'pujas:list' %}?q=Vivah">Vivah</a></li>
+                    <li><a href="{% url 'pujas:list' %}?q=Rudrabhishek">Rudrabhishek</a></li>
+                </ul>
+            </div>
+            
+            <div>
+                <h3>For Purohits</h3>
+                <ul>
+                    {% if user.is_authenticated and can_switch_to_purohit %}
+                    <li><a href="{% url 'dashboard:purohit' %}">Purohit dashboard</a></li>
+                    <li><a href="{% url 'accounts:wallet_dashboard' %}">Earnings wallet</a></li>
+                    {% else %}
+                    <li><a href="{% url 'accounts:signup' %}">Join the Platform</a></li>
+                    <li><a href="{% url 'accounts:login' %}">Login</a></li>
+                    {% endif %}
+                    <li><a href="{% url 'core:about' %}">How it works</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p>&copy; {% now "Y" %} PurohitConnect. All rights reserved.</p>
+        </div>
+    </div>
+</footer>

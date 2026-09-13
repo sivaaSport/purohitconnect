@@ -1,0 +1,16 @@
+<nav class="pc-page-nav" aria-label="Wallet">
+    <a href="{% url 'accounts:wallet_dashboard' %}" class="pc-page-nav-item {% if request.resolver_match.url_name == 'wallet_dashboard' %}is-active{% endif %}">
+        <i data-lucide="wallet"></i><span>Overview</span>
+    </a>
+    <a href="{% url 'accounts:wallet_transactions' %}" class="pc-page-nav-item {% if request.resolver_match.url_name == 'wallet_transactions' %}is-active{% endif %}">
+        <i data-lucide="history"></i><span>History</span>
+    </a>
+    <a href="{% url 'accounts:wallet_topup' %}" class="pc-page-nav-item {% if request.resolver_match.url_name == 'wallet_topup' or request.resolver_match.url_name == 'wallet_payment' %}is-active{% endif %}">
+        <i data-lucide="plus-circle"></i><span>Add money</span>
+    </a>
+    {% if is_purohit_workspace %}
+    <a href="{% url 'accounts:wallet_withdrawal' %}" class="pc-page-nav-item {% if request.resolver_match.url_name == 'wallet_withdrawal' %}is-active{% endif %}">
+        <i data-lucide="banknote"></i><span>Withdraw</span>
+    </a>
+    {% endif %}
+</nav>

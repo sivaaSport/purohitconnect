@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block title %}Browse Pujas | PurohitConnect{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Dark theme only — do not force dark cards in light mode */
+    [data-theme="dark"] .puja-shell .card {
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(17, 24, 39, 0.88));
+    }
+    .puja-shell .search-form {
+        display: grid;
+        gap: 1rem;
+            grid-template-columns: 1fr minmax(160px, 200px) minmax(160px, 200px) auto;
+        align-items: stretch;
+    }
+    @media (max-width: 720px) {
+        .puja-shell .search-form {
+            grid-template-columns: 1fr;
+        }
+    }
+    .puja-shell .search-form input,
+    .puja-shell .search-form select {
+        width: 100%;
+        min-height: 48px;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-bg-main);
+        color: var(--color-text-main);
+        font-size: 1rem;
+        font-family: var(--font-body);
+        line-height: 1.4;
+    }
+    .puja-shell .search-form select {
+        appearance: auto;
+        cursor: pointer;
+    }
+    .puja-shell .search-form option {
+        color: #0F172A;
+        background: #FFFFFF;
+    }
+    .puja-shell .puja-desc,
+    .puja-shell .puja-meta {
+        color: var(--color-text-muted);
+    }
+    .pc-venue-block { margin: 0 0 12px; }
+    .pc-venue-caption {
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+        margin-bottom: 4px;
+    }
+    .pc-venues { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+    .pc-venue-chip {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 3px 8px; border-radius: 999px;
+        background: rgba(217, 119, 6, 0.1);
+        color: var(--color-secondary);
+        font-size: 0.72rem; font-weight: 700;
+    }
+    .pc-venue-chip i { width: 12px; height: 12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container puja-shell" style="padding: var(--spacing-xl) var(--spacing-md);">
+    <div style="text-align: center; margin-bottom: var(--spacing-xl);">
+        <h1 style="margin-bottom: var(--spacing-sm);">Explore Pujas</h1>
+        <p style="color: var(--color-text-muted); font-size: 1.1rem; max-width: 600px; margin: 0 auto;">
+            Search rituals by name or browse by category, then find a purohit who offers them.
+            Usual place is the catalog default — each purohit confirms where they actually perform it.
+        </p>
+    </div>
+
+    <form method="get" class="card search-form" style="margin-bottom: var(--spacing-xl);">
+        <input type="text" name="q" value="{{ search_query }}" placeholder="Search pujas..." aria-label="Search pujas">
+        <select name="category" aria-label="Category">
+            <option value="">All categories</option>
+            {% for cat in all_categories %}
+                <option value="{{ cat.slug }}" {% if selected_category == cat.slug %}selected{% endif %}>{{ cat.name }}</option>
+            {% endfor %}
+        </select>
+        <select name="venue" aria-label="Place of ritual">
+            <option value="">Any place</option>
+            {% for code, label in venue_choices %}
+                <option value="{{ code }}" {% if selected_venue == code %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+
+    {% if search_query or selected_category or selected_venue %}
+        <p style="color: var(--color-text-muted); margin-bottom: var(--spacing-lg);">
+            Showing {{ result_count }} result{{ result_count|pluralize }}
+            {% if search_query %} for “{{ search_query }}”{% endif %}
+            {% if selected_category %} in selected category{% endif %}
+            {% if selected_venue %} at this place{% endif %}
+            · <a href="{% url 'pujas:list' %}">Clear</a>
+        </p>
+    {% endif %}
+
+    {% for category, pujas in categories.items %}
+        <div style="margin-bottom: var(--spacing-2xl);">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: var(--spacing-lg); border-bottom: 2px solid var(--color-border); padding-bottom: 0.5rem;">
+                <div style="width: 32px; height: 32px; background: rgba(217, 119, 6, 0.12); color: var(--color-primary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center;">
+                    <i data-lucide="{{ category.icon|default:'sparkles' }}" style="width: 18px; height: 18px;"></i>
+                </div>
+                <h2 style="margin: 0; color: var(--color-secondary);">{{ category.name }}</h2>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--spacing-lg);">
+                {% for puja in pujas %}
+                    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+                        <div>
+                            <h3 style="margin-bottom: 0.5rem; color: var(--color-primary);">{{ puja.name }}</h3>
+                            <p class="puja-desc" style="font-size: 0.95rem; margin-bottom: var(--spacing-md); line-height: 1.5;">
+                                {{ puja.description|truncatewords:20 }}
+                            </p>
+                            {% include 'pujas/partials/venue_chips.html' with items=puja.get_typical_venue_items caption='Usually at' %}
+                            {% include 'pujas/partials/venue_chips.html' with items=puja.extra_offered_venue_items caption='Some purohits also' %}
+                        </div>
+                        <div style="border-top: 1px dashed var(--color-border); padding-top: var(--spacing-sm); display: flex; justify-content: space-between; align-items: center;">
+                            <span class="puja-meta" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.25rem;">
+                                <i data-lucide="clock" style="width: 14px; height: 14px;"></i> {{ puja.base_duration_hours }} hours
+                            </span>
+                            <a href="{% url 'purohits:list' %}?puja={{ puja.id }}" class="btn btn-primary" style="padding: 0.35rem 0.9rem; font-size: 0.85rem;">Choose a purohit</a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% empty %}
+        <div class="card" style="text-align: center; padding: var(--spacing-2xl);">
+            <i data-lucide="book-open" style="width: 48px; height: 48px; color: var(--color-text-muted); margin: 0 auto var(--spacing-md);"></i>
+            <h3>No Pujas Found</h3>
+            <p style="color: var(--color-text-muted);">Try a different search, or browse all categories.</p>
+            <a href="{% url 'pujas:list' %}" class="btn btn-outline" style="margin-top: var(--spacing-md);">View all pujas</a>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% for notification in user.notifications.all|slice:":10" %}
+    <div class="pc-notif-item {% if not notification.is_read %}is-unread{% endif %}">
+        <button type="button"
+                class="pc-notif-delete"
+                hx-post="{% url 'core:delete_single_notification' notification.pk %}"
+                hx-target="#notification-items-container"
+                hx-swap="innerHTML"
+                aria-label="Remove notification">
+            <i data-lucide="x"></i>
+        </button>
+        <a href="{% url 'core:mark_single_notification_read' notification.pk %}">
+            <span class="pc-notif-mark" aria-hidden="true">
+                {% if not notification.is_read %}<i data-lucide="bell"></i>{% else %}<i data-lucide="check"></i>{% endif %}
+            </span>
+            <span>
+                <strong>{{ notification.title }}</strong>
+                <p>{{ notification.message }}</p>
+                <time>{{ notification.created_at|timesince }} ago</time>
+            </span>
+        </a>
+    </div>
+{% empty %}
+    <div class="pc-notif-empty">
+        <i data-lucide="bell-off"></i>
+        No new notifications
+    </div>
+{% endfor %}
+
+<script>
+    if (window.lucide) lucide.createIcons();
+    if (typeof updateNotificationBadge === 'function') updateNotificationBadge();
+</script>

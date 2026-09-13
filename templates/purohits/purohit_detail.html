@@ -1,0 +1,460 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ purohit.name }} | PurohitConnect{% endblock %}
+
+{% block extra_head %}
+<style>
+    [data-theme="dark"] .detail-shell .card {
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(17, 24, 39, 0.84));
+    }
+    [data-theme="light"] .detail-shell .card {
+        background: #FFFFFF;
+        border-color: rgba(15, 23, 42, 0.12);
+    }
+    .package-card {
+        cursor: pointer;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        position: relative;
+    }
+    .package-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 0;
+        background: linear-gradient(180deg, #f59e0b, #d97706);
+        border-radius: 18px 0 0 18px;
+        transition: width 0.15s ease;
+        pointer-events: none;
+    }
+    [data-theme="light"] .card.package-card.is-selected,
+    [data-theme="dark"] .card.package-card.is-selected {
+        border-color: #d97706 !important;
+        box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.38), 0 14px 28px rgba(217, 119, 6, 0.16) !important;
+        transform: none;
+    }
+    [data-theme="light"] .card.package-card.is-selected {
+        background-color: #fffbeb !important;
+    }
+    [data-theme="dark"] .card.package-card.is-selected {
+        background-color: rgba(250, 204, 21, 0.14) !important;
+        border-color: #facc15 !important;
+        box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.42) !important;
+    }
+    .package-card.is-selected::before { width: 7px; }
+    .package-card.is-selected .package-select-btn,
+    .package-card.is-selected .package-select-btn:hover {
+        background: #111827 !important;
+        color: #facc15 !important;
+        border-color: #111827 !important;
+        font-weight: 800;
+    }
+    .package-selected-flag {
+        display: none;
+        margin-left: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #f59e0b, #facc15);
+        color: #111827;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+    .package-card.is-selected .package-selected-flag { display: inline-flex; }
+    .pc-venue-caption {
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+        margin-bottom: 4px;
+    }
+    .pc-coverage { margin: 0 0 0.6rem; }
+    .pc-coverage-line {
+        display: flex; align-items: center; gap: 0.4rem;
+        color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: 4px;
+    }
+    .pc-coverage-line i { width: 15px; height: 15px; flex-shrink: 0; }
+    .pc-coverage-note { margin: 6px 0 0; font-size: 0.82rem; color: var(--color-text-muted); }
+    .pc-venues { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+    .pc-venue-chip {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 3px 8px; border-radius: 999px;
+        background: rgba(217, 119, 6, 0.1);
+        color: var(--color-secondary);
+        font-size: 0.72rem; font-weight: 700;
+    }
+    .pc-venue-chip i { width: 12px; height: 12px; }
+    .pc-venue-note { margin: 6px 0 0; font-size: 0.8rem; color: var(--color-text-muted); }
+    #selected-puja-name {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-bg-main);
+        color: var(--color-text-main);
+        font-weight: 600;
+    }
+    #selected-puja-name.is-filled {
+        border-color: #d97706 !important;
+        background: #fffbeb !important;
+        color: #111827 !important;
+        box-shadow: inset 0 0 0 1px rgba(217, 119, 6, 0.25);
+    }
+    [data-theme="dark"] #selected-puja-name.is-filled {
+        color: #fde68a !important;
+        background: rgba(250, 204, 21, 0.12) !important;
+    }
+    .preview-selected-date {
+        display: none;
+        margin: 10px 0 0;
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: #fffbeb;
+        border: 1px solid #f59e0b;
+        color: #92400e;
+        font-size: 0.82rem;
+        font-weight: 800;
+    }
+    [data-theme="dark"] .preview-selected-date {
+        background: rgba(250, 204, 21, 0.12);
+        border-color: #facc15;
+        color: #fde68a;
+    }
+    #purohit-map {
+        position: relative;
+        z-index: 0;
+        overflow: hidden;
+        isolation: isolate;
+    }
+    #purohit-map .leaflet-container {
+        z-index: 0;
+    }
+    .pc-intent-banner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: var(--spacing-lg);
+        padding: 0.95rem 1.15rem;
+        border-radius: 18px;
+        background:
+            radial-gradient(circle at 0% 0%, rgba(251, 191, 36, 0.26), transparent 40%),
+            linear-gradient(135deg, #fffbeb, #ffffff);
+        border: 1px solid rgba(217, 119, 6, 0.22);
+    }
+    [data-theme="dark"] .pc-intent-banner {
+        background:
+            radial-gradient(circle at 0% 0%, rgba(250, 204, 21, 0.16), transparent 40%),
+            linear-gradient(135deg, rgba(250, 204, 21, 0.08), rgba(15, 23, 42, 0.45));
+        border-color: rgba(250, 204, 21, 0.28);
+    }
+    .pc-intent-kicker {
+        margin: 0 0 4px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #b45309;
+    }
+    [data-theme="dark"] .pc-intent-kicker { color: #fde68a; }
+    .pc-intent-banner h2 { margin: 0 0 4px; font-size: 1.25rem; }
+    .pc-intent-banner p { margin: 0; color: var(--color-text-muted); font-size: 0.92rem; }
+    .booking-sidebar {
+        position: sticky;
+        top: 88px;
+        z-index: 2;
+        border: 2px solid var(--color-primary);
+        max-height: calc(100vh - 108px);
+        overflow: auto;
+    }
+    .booking-cal {
+        margin: 0 0 var(--spacing-md);
+        padding: 0.85rem 0 0;
+        border-top: 1px solid var(--color-border);
+    }
+    [data-theme="light"] .booking-sidebar {
+        background: #FFFFFF !important;
+    }
+    [data-theme="dark"] .booking-sidebar {
+        background: var(--color-bg-card) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container detail-shell" style="padding: var(--spacing-xl) var(--spacing-md);">
+    
+    <!-- Breadcrumbs -->
+    <div style="margin-bottom: var(--spacing-md); font-size: 0.9rem; color: var(--color-text-muted);">
+        <a href="/" style="color: var(--color-text-muted);">Home</a> &rsaquo;
+        {% if focus_puja %}
+        <a href="{% url 'pujas:list' %}?q={{ focus_puja.name|urlencode }}" style="color: var(--color-text-muted);">Pujas</a> &rsaquo;
+        <a href="{% url 'purohits:list' %}?puja={{ focus_puja.id }}" style="color: var(--color-text-muted);">{{ focus_puja.name }}</a> &rsaquo;
+        {% else %}
+        <a href="{% url 'purohits:list' %}" style="color: var(--color-text-muted);">Purohits</a> &rsaquo;
+        {% endif %}
+        <span style="color: var(--color-text-main);">{{ purohit.name }}</span>
+    </div>
+
+    {% if focus_package %}
+    <div class="pc-intent-banner">
+        <div>
+            <p class="pc-intent-kicker">Ready to book</p>
+            <h2>{{ focus_package.puja.name }} with {{ purohit.name }}</h2>
+            <p>This ritual is already selected. Pick a date in the sidebar, or continue straight to booking.</p>
+        </div>
+        <a href="{% url 'bookings:book' focus_package.id %}" class="btn btn-primary" id="intent-book-now">Continue to book</a>
+    </div>
+    {% endif %}
+
+    <div style="display: grid; grid-template-columns: 1fr; gap: var(--spacing-xl); align-items: start;">
+        <style>
+            @media (min-width: 992px) {
+                .detail-grid {
+                    grid-template-columns: 2fr 1fr !important;
+                }
+            }
+        </style>
+        
+        <div class="detail-grid" style="display: grid; grid-template-columns: 1fr; gap: var(--spacing-xl); align-items: start;">
+            
+            <!-- Main Content: Profile & Packages -->
+            <div style="display: flex; flex-direction: column; gap: var(--spacing-xl);">
+                
+                <!-- Profile Header Card -->
+                <div class="card" style="display: flex; flex-direction: column; gap: var(--spacing-lg);">
+                    <div style="display: flex; gap: var(--spacing-lg); align-items: center; flex-wrap: wrap;">
+                        <!-- Avatar -->
+                        <div style="width: 120px; height: 120px; border-radius: var(--radius-full); background: var(--color-border); overflow: hidden; flex-shrink: 0; border: 4px solid var(--color-bg-main); box-shadow: var(--shadow-sm);">
+                            {% if purohit.profile.user.avatar %}
+                                <img src="{{ purohit.profile.user.avatar.url }}" alt="{{ purohit.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                            {% else %}
+                                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #FFF3E0; color: var(--color-primary);">
+                                    <i data-lucide="user" style="width: 48px; height: 48px;"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Info -->
+                        <div style="flex-grow: 1;">
+                            <h1 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                                {{ purohit.name }}
+                                {% if purohit.profile.is_verified %}
+                                    <i data-lucide="badge-check" style="color: var(--color-primary); width: 24px; height: 24px;" title="Verified Profile"></i>
+                                {% endif %}
+                            </h1>
+                            {% include 'purohits/partials/coverage.html' %}
+                            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                                <div style="display: flex; align-items: center; gap: 0.25rem;">
+                                    <i data-lucide="star" style="width: 18px; height: 18px; color: var(--color-accent); fill: var(--color-accent);"></i>
+                                    <span style="font-weight: 600;">{{ purohit.avg_rating }}</span>
+                                </div>
+                                <div style="width: 1px; height: 16px; background: var(--color-border);"></div>
+                                <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--color-text-muted);">
+                                    <i data-lucide="briefcase" style="width: 16px; height: 16px;"></i>
+                                    {{ purohit.profile.experience_years }} years exp.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-md);">
+                        <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem;">About</h3>
+                        <p style="color: var(--color-text-muted); line-height: 1.6;">
+                            {{ purohit.profile.about|default:"A learned and experienced purohit offering authentic Vedic rituals and pujas." }}
+                        </p>
+                        
+                        <div style="margin-top: var(--spacing-md);">
+                            <h4 style="font-size: 0.9rem; color: var(--color-text-main); margin-bottom: 0.5rem;">Languages Spoken:</h4>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                {% for lang in purohit.profile.languages_spoken.all %}
+                                    <span style="background: var(--color-bg-main); padding: 4px 12px; border-radius: var(--radius-full); font-size: 0.9rem; border: 1px solid var(--color-border);">{{ lang.name }}</span>
+                                {% empty %}
+                                    <span style="color: var(--color-text-muted);">Not specified</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if focus_package %}
+                    {% include 'purohits/partials/package_list.html' %}
+                    {% include 'purohits/partials/gallery.html' %}
+                {% else %}
+                    {% include 'purohits/partials/gallery.html' %}
+                    {% include 'purohits/partials/package_list.html' %}
+                {% endif %}
+                
+            </div>
+            
+            <!-- Sidebar: Booking Form -->
+            <aside>
+                <div class="card booking-sidebar">
+                    <h3 style="margin-bottom: var(--spacing-md); color: var(--color-secondary);">Book this Purohit</h3>
+                    
+                    <form action="#" method="POST" id="booking-form" onsubmit="event.preventDefault(); proceedToBooking();">
+                        {% csrf_token %}
+                        <div style="margin-bottom: var(--spacing-md);">
+                            <label style="display: block; font-weight: 500; margin-bottom: var(--spacing-sm);">Selected Puja</label>
+                            <input type="text" id="selected-puja-name" readonly placeholder="Please select a package from the list" value="{{ focus_package.puja.name|default:'' }}"{% if focus_package %} class="is-filled"{% endif %}>
+                            <input type="hidden" name="package_id" id="selected-package-id" value="{{ focus_package.id|default:'' }}">
+                            <input type="hidden" id="preview-selected-iso" value="">
+                        </div>
+                        
+                        <div style="margin-bottom: var(--spacing-md);">
+                            <label style="display: block; font-weight: 500; margin-bottom: var(--spacing-sm);">Where they work</label>
+                            {% include 'purohits/partials/coverage.html' %}
+                            <div id="purohit-map" style="height: 140px; border-radius: var(--radius-md); border: 1px solid var(--color-border); margin-top: 10px;"></div>
+                        </div>
+
+                        <div class="booking-cal">
+                            {% include 'components/calendar_styles.html' %}
+                            <h3 style="margin: 0 0 6px; font-size: 1rem;">This month’s openings</h3>
+                            <p style="margin: 0 0 10px; font-size: 0.8rem; color: var(--color-text-muted);">{{ availability_month_label }} · green open · amber limited · red full</p>
+                            <div class="pc-cal-grid pc-cal-head">
+                                <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
+                            </div>
+                            <div class="pc-cal-grid" id="preview-calendar">
+                                {% for week in availability_weeks %}
+                                    {% for day in week %}
+                                        {% if day.in_month %}
+                                        <button type="button"
+                                                class="pc-cal-day status-{{ day.status }} {% if day.is_today %}is-today{% endif %}"
+                                                data-iso="{{ day.date|date:'Y-m-d' }}"
+                                                data-date="{{ day.date|date:'M j' }}"
+                                                {% if day.status == 'full' or day.status == 'past' %}disabled{% endif %}
+                                                title="{{ day.status|title }}"
+                                                onclick="selectPreviewDay(this)">{{ day.date.day }}</button>
+                                        {% else %}
+                                        <div></div>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endfor %}
+                            </div>
+                            <div class="pc-cal-legend">
+                                <span><i class="pc-cal-dot" style="background: rgba(16,185,129,0.45);"></i> Open</span>
+                                <span><i class="pc-cal-dot" style="background: rgba(245,158,11,0.55);"></i> Limited</span>
+                                <span><i class="pc-cal-dot" style="background: rgba(239,68,68,0.45);"></i> Full</span>
+                                <span><i class="pc-cal-dot" style="background: #b45309;"></i> Selected</span>
+                            </div>
+                            <p id="preview-selected-date" class="preview-selected-date">Selected date: <span></span></p>
+                            <p style="margin: 10px 0 0; font-size: 0.78rem; color: var(--color-text-muted);">
+                                {% if focus_package %}
+                                    Exact timings appear on the next page after you continue.
+                                {% else %}
+                                    Exact timings appear after you select a puja and continue to book.
+                                {% endif %}
+                            </p>
+                        </div>
+                        
+                        <button type="button" class="btn btn-primary" style="width: 100%; font-size: 1.1rem; padding: 0.75rem;" onclick="proceedToBooking()">Continue to Book</button>
+                    </form>
+                    
+                    <div style="margin-top: var(--spacing-md); text-align: center; font-size: 0.85rem; color: var(--color-text-muted);">
+                        <i data-lucide="shield-check" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"></i> Secure booking via PurohitConnect
+                    </div>
+                </div>
+            </aside>
+            
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function selectPackage(id, name, options) {
+        const idField = document.getElementById('selected-package-id');
+        const nameField = document.getElementById('selected-puja-name');
+        if (!idField || !nameField) return;
+
+        idField.value = String(id);
+        nameField.value = name;
+        nameField.style.color = 'var(--color-text-main)';
+
+        nameField.classList.add('is-filled');
+        document.querySelectorAll('.package-card').forEach(function(card) {
+            const selected = card.getAttribute('data-package-id') === String(id);
+            card.classList.toggle('is-selected', selected);
+            card.setAttribute('aria-pressed', selected ? 'true' : 'false');
+            const btn = card.querySelector('.package-select-btn');
+            if (btn) btn.textContent = selected ? '\u2713 Selected' : 'Select';
+        });
+
+        if (!(options && options.skipScroll) && window.innerWidth < 992) {
+            document.getElementById('booking-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    function bookingUrlFor(pkgId) {
+        let url = '{% url "bookings:book" 0 %}'.replace('/0/', '/' + pkgId + '/');
+        const iso = (document.getElementById('preview-selected-iso') || {}).value || '';
+        if (iso) url += '?date=' + encodeURIComponent(iso);
+        return url;
+    }
+
+    function syncBookNowLinks() {
+        document.querySelectorAll('.package-book-now').forEach(function(link) {
+            const id = link.getAttribute('data-package-id');
+            if (id) link.setAttribute('href', bookingUrlFor(id));
+        });
+        const intent = document.getElementById('intent-book-now');
+        const selectedId = (document.getElementById('selected-package-id') || {}).value;
+        if (intent && selectedId) intent.setAttribute('href', bookingUrlFor(selectedId));
+    }
+
+    function selectPreviewDay(btn) {
+        document.querySelectorAll('#preview-calendar .pc-cal-day').forEach(function(el) {
+            el.classList.toggle('is-selected', el === btn);
+            el.setAttribute('aria-pressed', el === btn ? 'true' : 'false');
+        });
+        const isoField = document.getElementById('preview-selected-iso');
+        if (isoField) isoField.value = btn.getAttribute('data-iso') || '';
+        const label = document.getElementById('preview-selected-date');
+        if (label) {
+            label.style.display = 'block';
+            label.querySelector('span').textContent = btn.getAttribute('data-date') || '';
+        }
+        syncBookNowLinks();
+    }
+
+    function proceedToBooking() {
+        const pkgId = document.getElementById('selected-package-id').value;
+        if (!pkgId) {
+            alert('Please select a Puja Package from the list first.');
+            return;
+        }
+        window.location.href = bookingUrlFor(pkgId);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const preselectId = '{{ focus_package.id|default:"" }}';
+        const preselectName = '{{ focus_package.puja.name|escapejs }}';
+        if (preselectId) {
+            selectPackage(preselectId, preselectName, { skipScroll: true });
+        }
+
+        if (typeof L === 'undefined') return;
+
+        const lat = {{ purohit.city.latitude|default:"17.3850" }};
+        const lng = {{ purohit.city.longitude|default:"78.4867" }};
+        
+        const map = L.map('purohit-map', { scrollWheelZoom: false }).setView([lat, lng], 11);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+        
+        L.marker([lat, lng]).addTo(map)
+            .bindPopup("{{ purohit.name|escapejs }} — {{ purohit.city.name|escapejs }}");
+
+        setTimeout(function() { map.invalidateSize(); }, 200);
+    });
+</script>
+{% endblock %}

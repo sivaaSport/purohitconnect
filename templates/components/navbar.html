@@ -1,0 +1,354 @@
+{% url 'dashboard:purohit' as url_purohit %}
+{% url 'dashboard:customer' as url_customer %}
+{% url 'pujas:list' as url_pujas %}
+{% url 'purohits:list' as url_purohits %}
+{% url 'core:about' as url_about %}
+{% url 'accounts:wallet_dashboard' as url_wallet %}
+{% url 'accounts:profile' as url_profile %}
+
+<nav class="navbar" x-data="{ notifOpen: false, profileOpen: false, mobileOpen: false }">
+    <div class="navbar-inner">
+        <div class="navbar-left">
+            <a href="{% if user.is_authenticated and is_purohit_workspace %}{{ url_purohit }}{% elif user.is_authenticated %}{{ url_customer }}{% else %}/{% endif %}" class="brand">
+                <i data-lucide="flame" class="brand-icon"></i>
+                PurohitConnect
+            </a>
+            {% include 'components/workspace_switch.html' %}
+        </div>
+
+        <div class="navbar-center" :class="{ 'is-open': mobileOpen }" @click="if ($event.target.closest('a')) mobileOpen = false">
+            {% if user.is_authenticated and is_purohit_workspace %}
+            <a href="{{ url_purohit }}" class="pc-nav-item {% if request.path == url_purohit %}is-active{% endif %}" data-nav="bookings">
+                <i data-lucide="inbox"></i><span>Incoming</span>
+            </a>
+            <a href="{{ url_purohit }}#my-pujas" class="pc-nav-item" data-nav="my-pujas">
+                <i data-lucide="sparkles"></i><span>My Pujas</span>
+            </a>
+            <a href="{{ url_purohit }}#calendar" class="pc-nav-item" data-nav="calendar">
+                <i data-lucide="calendar-days"></i><span>Calendar</span>
+            </a>
+            <a href="{{ url_wallet }}" class="pc-nav-item {% if '/accounts/wallet' in request.path %}is-active{% endif %}">
+                <i data-lucide="wallet"></i><span>Earnings</span>
+            </a>
+            {% else %}
+            <a href="{{ url_pujas }}" class="pc-nav-item {% if request.path == url_pujas or '/pujas/' in request.path %}is-active{% endif %}">
+                <i data-lucide="book-open"></i><span>Browse Pujas</span>
+            </a>
+            <a href="{{ url_purohits }}" class="pc-nav-item {% if '/purohits/' in request.path %}is-active{% endif %}">
+                <i data-lucide="users"></i><span>Find a Purohit</span>
+            </a>
+            {% if user.is_authenticated %}
+            <a href="{{ url_customer }}" class="pc-nav-item {% if request.path == url_customer %}is-active{% endif %}" data-nav="bookings">
+                <i data-lucide="calendar-check"></i><span>My Bookings</span>
+            </a>
+            <a href="{{ url_wallet }}" class="pc-nav-item {% if '/accounts/wallet' in request.path %}is-active{% endif %}">
+                <i data-lucide="wallet"></i><span>Wallet</span>
+            </a>
+            {% else %}
+            <a href="{{ url_about }}" class="pc-nav-item {% if request.path == url_about %}is-active{% endif %}">
+                <i data-lucide="info"></i><span>About</span>
+            </a>
+            {% endif %}
+            {% endif %}
+        </div>
+
+        <div class="navbar-right">
+            <button type="button" class="pc-nav-burger" @click="mobileOpen = !mobileOpen; notifOpen = false; profileOpen = false" :aria-expanded="mobileOpen.toString()" aria-label="Open menu">
+                <svg x-show="!mobileOpen" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg>
+                <svg x-show="mobileOpen" x-cloak xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+                <div class="pc-theme-switch" id="theme-toggle" role="radiogroup" aria-label="Theme">
+                    <button type="button" class="pc-theme-opt" data-theme-pref="light" role="radio" aria-label="Light theme" title="Light">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                    </button>
+                    <button type="button" class="pc-theme-opt" data-theme-pref="system" role="radio" aria-label="System theme" title="System">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+                    </button>
+                    <button type="button" class="pc-theme-opt" data-theme-pref="dark" role="radio" aria-label="Dark theme" title="Dark">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                    </button>
+                </div>
+
+                {% if user.is_authenticated %}
+                    <div style="position: relative;">
+                        <button type="button" class="pc-nav-icon" @click="notifOpen = !notifOpen; profileOpen = false" aria-label="Notifications">
+                            <i data-lucide="bell" style="width: 18px; height: 18px;"></i>
+                            <span id="notification-badge" style="display: none; position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; background: var(--color-primary); border: 2px solid var(--color-bg-card); border-radius: 50%;"></span>
+                        </button>
+
+                        <div class="pc-notif-panel" x-show="notifOpen"
+                             @click.away="notifOpen = false"
+                             x-cloak
+                             x-transition>
+                            <div class="pc-notif-head">
+                                <h4>Notifications</h4>
+                                <a href="{% url 'core:clear_all_notifications' %}">Clear all</a>
+                            </div>
+                            <div id="notification-items-container" style="max-height: 400px; overflow-y: auto;">
+                                {% include 'components/partials/notification_list.html' %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if user.is_staff %}
+                    <a href="{% url 'dashboard:admin_payment' %}" class="pc-nav-item">Admin</a>
+                    {% endif %}
+
+                    <div style="position: relative;">
+                        <button type="button" class="pc-nav-icon" @click="profileOpen = !profileOpen; notifOpen = false"
+                                title="Profile" aria-label="Open profile menu"
+                                style="border: 1.5px solid var(--color-primary); background: rgba(250, 204, 21, 0.12); color: var(--color-primary); overflow: hidden;">
+                            {% if user.avatar %}
+                            <img src="{{ user.avatar.url }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                            {% else %}
+                            <i data-lucide="user" style="width: 18px; height: 18px;"></i>
+                            {% endif %}
+                        </button>
+
+                        <div x-show="profileOpen"
+                             @click.away="profileOpen = false"
+                             x-cloak
+                             x-transition
+                             style="position: absolute; top: 100%; right: 0; margin-top: 12px; width: 240px; background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: 16px; box-shadow: var(--shadow-lg); z-index: 1000; overflow: hidden;">
+                            <div style="padding: 14px 16px; border-bottom: 1px solid var(--color-border); background: var(--color-bg-main);">
+                                <div style="font-weight: 700; color: var(--color-text-main); font-size: 0.95rem; line-height: 1.3;">
+                                    {{ user.get_full_name|default:user.username }}
+                                </div>
+                                <div style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 2px; text-transform: capitalize;">
+                                    {% if is_purohit_workspace %}Purohit workspace{% elif user.is_staff %}Admin{% else %}Devotee workspace{% endif %}
+                                    {% if user.phone %} · {{ user.phone }}{% endif %}
+                                </div>
+                            </div>
+                            <div style="padding: 8px;">
+                                <a href="{{ url_profile }}" class="pc-nav-menu-link">
+                                    <i data-lucide="user-round" style="width: 16px; height: 16px; color: var(--color-primary);"></i>
+                                    My Profile
+                                </a>
+                                <a href="{{ url_customer }}" class="pc-nav-menu-link">
+                                    <i data-lucide="calendar-check" style="width: 16px; height: 16px; color: var(--color-primary);"></i>
+                                    Devotee bookings
+                                </a>
+                                {% if can_switch_to_purohit %}
+                                <a href="{{ url_purohit }}" class="pc-nav-menu-link">
+                                    <i data-lucide="layout-dashboard" style="width: 16px; height: 16px; color: var(--color-primary);"></i>
+                                    Purohit dashboard
+                                </a>
+                                {% endif %}
+                                <a href="{{ url_wallet }}" class="pc-nav-menu-link">
+                                    <i data-lucide="wallet" style="width: 16px; height: 16px; color: var(--color-primary);"></i>
+                                    Wallet
+                                </a>
+                                <div style="height: 1px; background: var(--color-border); margin: 6px 8px;"></div>
+                                <a href="{% url 'accounts:logout' %}" class="pc-nav-menu-link is-danger">
+                                    <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
+                                    Logout
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <a href="{% url 'accounts:login' %}" class="pc-nav-item">Login</a>
+                    <a href="{% url 'accounts:signup' %}" class="btn btn-primary" style="padding: 0.45rem 1rem; border-radius: 999px;">Sign Up</a>
+                {% endif %}
+        </div>
+    </div>
+    <div class="pc-nav-backdrop" x-show="mobileOpen" x-cloak x-transition.opacity @click="mobileOpen = false"></div>
+</nav>
+
+<script>
+    function getSystemTheme() {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    function normalizeThemePref(pref) {
+        return (pref === 'light' || pref === 'dark' || pref === 'system') ? pref : 'dark';
+    }
+
+    function resolveTheme(pref) {
+        return pref === 'system' ? getSystemTheme() : pref;
+    }
+
+    function syncThemeButtons(pref) {
+        document.querySelectorAll('.pc-theme-opt').forEach(function(btn) {
+            const active = btn.getAttribute('data-theme-pref') === pref;
+            btn.classList.toggle('is-active', active);
+            btn.setAttribute('aria-checked', active ? 'true' : 'false');
+        });
+    }
+
+    window.applyTheme = function(pref) {
+        pref = normalizeThemePref(pref);
+        localStorage.setItem('theme', pref);
+        document.documentElement.setAttribute('data-theme-pref', pref);
+        document.documentElement.setAttribute('data-theme', resolveTheme(pref));
+        syncThemeButtons(pref);
+    };
+
+    window.setSiteTheme = function(pref) {
+        applyTheme(pref);
+    };
+
+    window.toggleSiteTheme = function() {
+        const order = ['light', 'system', 'dark'];
+        const current = normalizeThemePref(localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme-pref'));
+        applyTheme(order[(order.indexOf(current) + 1) % order.length]);
+    };
+
+    document.querySelectorAll('.pc-theme-opt').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            applyTheme(btn.getAttribute('data-theme-pref'));
+        });
+    });
+
+    applyTheme(localStorage.getItem('theme') || 'dark');
+
+    const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+    const onSystemThemeChange = function() {
+        if (normalizeThemePref(localStorage.getItem('theme')) === 'system') {
+            applyTheme('system');
+        }
+    };
+    if (themeMedia.addEventListener) themeMedia.addEventListener('change', onSystemThemeChange);
+    else if (themeMedia.addListener) themeMedia.addListener(onSystemThemeChange);
+
+    function markHashNav() {
+        const raw = (window.location.hash || '').replace('#', '');
+        const aliases = {
+            'my-pujas': 'my-pujas',
+            'calendar': 'calendar',
+            'sacred-calendar': 'calendar',
+            'incoming-bookings': 'bookings',
+            'my-bookings': 'bookings'
+        };
+        const mapped = aliases[raw] || raw;
+        document.querySelectorAll('.pc-nav-item[data-nav]').forEach((el) => {
+            const key = el.getAttribute('data-nav');
+            if (!mapped) return;
+            el.classList.toggle('is-active', key === mapped);
+        });
+        document.querySelectorAll('.pc-page-nav-item[href^="#"]').forEach((el) => {
+            const key = (el.getAttribute('href') || '').replace('#', '');
+            el.classList.toggle('is-active', Boolean(mapped) && (key === raw || aliases[key] === mapped));
+        });
+    }
+    window.addEventListener('hashchange', markHashNav);
+    document.addEventListener('DOMContentLoaded', markHashNav);
+
+    const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+    let currentCount = null;
+
+    function showToast(message) {
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed; bottom: 30px; right: 30px;
+            background: var(--color-bg-card); color: var(--color-text-main);
+            padding: 14px 28px; border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.18);
+            z-index: 9999; animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            font-weight: 500; display: flex; align-items: center; gap: 12px;
+            border: 1px solid var(--color-border);
+        `;
+        toast.innerHTML = `<i data-lucide='bell' style='width:18px; color:var(--color-primary);'></i> ${message}`;
+        document.body.appendChild(toast);
+        if (window.lucide) lucide.createIcons();
+        setTimeout(() => notificationSound.play().catch(() => {}), 100);
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+            setTimeout(() => toast.remove(), 400);
+        }, 5000);
+    }
+
+    function updateNotificationBadge() {
+        {% if user.is_authenticated %}
+            fetch('/notifications/count/')
+                .then(response => response.json())
+                .then(data => {
+                    const badge = document.getElementById('notification-badge');
+                    if (data.count > 0) {
+                        badge.style.display = 'block';
+                        if (currentCount !== null && data.count > currentCount) {
+                            showToast("New message received");
+                            fetch('/notifications/list/')
+                                .then(res => res.text())
+                                .then(html => {
+                                    const container = document.getElementById('notification-items-container');
+                                    if (container) {
+                                        container.innerHTML = html;
+                                        if (window.lucide) lucide.createIcons();
+                                        if (window.htmx) htmx.process(container);
+                                    }
+                                });
+                        }
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                    currentCount = data.count;
+                });
+        {% endif %}
+    }
+
+    setInterval(updateNotificationBadge, 8000);
+    document.addEventListener('DOMContentLoaded', updateNotificationBadge);
+</script>
+
+<style>
+    html { scroll-behavior: smooth; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+    .pc-nav-menu-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        color: var(--color-text-main);
+        text-decoration: none;
+        font-weight: 500;
+        transition: background 0.18s ease, transform 0.18s ease;
+    }
+    .pc-nav-menu-link:hover {
+        background: var(--color-bg-main);
+        color: var(--color-text-main);
+    }
+    .pc-nav-menu-link.is-danger { color: #EF4444; }
+    .pc-nav-menu-link.is-danger:hover { background: rgba(239, 68, 68, 0.08); color: #EF4444; }
+    .pc-theme-switch {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.06);
+        border: 1px solid var(--color-border);
+        gap: 1px;
+        flex-shrink: 0;
+    }
+    [data-theme="dark"] .pc-theme-switch {
+        background: rgba(255, 255, 255, 0.08);
+    }
+    .pc-theme-opt {
+        width: 32px;
+        height: 28px;
+        border: none;
+        background: transparent;
+        color: var(--color-text-muted);
+        border-radius: 999px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+    }
+    .pc-theme-opt:hover { color: var(--color-primary); }
+    .pc-theme-opt.is-active {
+        background: #ffffff;
+        color: #0f172a;
+        box-shadow: 0 1px 4px rgba(15, 23, 42, 0.14);
+    }
+    [data-theme="dark"] .pc-theme-opt.is-active {
+        background: #1e293b;
+        color: #f8fafc;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    }
+    .pc-theme-opt svg { width: 16px; height: 16px; display: block; }
+</style>

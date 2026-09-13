@@ -1,0 +1,143 @@
+<article class="ph-book card" data-booking-id="{{ booking.booking_id }}">
+    <div class="ph-book-head">
+        <div>
+            <p class="ph-book-id">{{ booking.booking_id }}</p>
+            <h3 {% if booking.status == 'cancelled' %}class="is-cancelled"{% endif %}>
+                {{ booking.puja_package.puja.name }}
+            </h3>
+        </div>
+        <div class="ph-book-status">
+            <button type="button"
+                    @click="activeBooking = bookings.find(b => b.id === '{{ booking.booking_id }}'); timelineOpen = true"
+                    class="status-pill ph-status-{{ booking.lifecycle_key }}">
+                <span class="pulse-dot"></span>
+                {{ booking.lifecycle_label }}
+                <i data-lucide="chevron-right"></i>
+            </button>
+            <strong class="ph-book-amount">₹{{ booking.total_amount|floatformat:"0" }}</strong>
+        </div>
+    </div>
+
+    <dl class="ph-meta">
+        <div>
+            <dt>Purohit</dt>
+            <dd>{{ booking.purohit.name }}</dd>
+        </div>
+        <div>
+            <dt>When</dt>
+            <dd>
+                {{ booking.event_date|date:"D, d M Y" }}
+                {% if booking.event_time %} · {{ booking.get_time_window_label }}{% endif %}
+                · {{ booking.get_duration_hours }}h ritual
+            </dd>
+        </div>
+        <div>
+            <dt>Where</dt>
+            <dd>
+                {% if booking.get_venue_label %}{{ booking.get_venue_label }} · {% endif %}
+                {{ booking.area.name }}{% if booking.city %}, {{ booking.city.name }}{% endif %}
+            </dd>
+        </div>
+        <div>
+            <dt>Payment</dt>
+            <dd>
+                {% if booking.payment_status == 'success' %}Paid
+                {% elif booking.payment_status == 'failed' %}Payment failed
+                {% else %}Waiting for payment{% endif %}
+                {% if booking.travel_fee %} · ₹{{ booking.travel_fee|floatformat:"0" }} travel{% endif %}
+            </dd>
+        </div>
+        {% if booking.address %}
+        <div class="ph-meta-full">
+            <dt>Address</dt>
+            <dd>{{ booking.address }}</dd>
+        </div>
+        {% endif %}
+    </dl>
+
+    {% if booking.accepted_at and booking.status != 'completed' and booking.status != 'cancelled' %}
+    <div class="ph-keys" aria-label="Sacred keys for the purohit">
+        <div class="ph-keys-head">
+            <p class="ph-keys-kicker">Sacred keys</p>
+            <p>Share only with {{ booking.purohit.name }}</p>
+        </div>
+        <div class="ph-key-grid">
+            {% if not booking.started_at %}
+            <div class="ph-key-card is-start" title="Share with the purohit to start">
+                <span class="ph-key-label">Start · to begin</span>
+                <div class="ph-key-row">
+                    {% for digit in booking.start_code %}
+                    <span class="ph-key">{{ digit }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            <div class="ph-key-card is-done" title="Share with the purohit to complete">
+                <span class="ph-key-label">Done · when finished</span>
+                <div class="ph-key-row">
+                    {% for digit in booking.complete_code %}
+                    <span class="ph-key">{{ digit }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="ph-book-actions">
+        {% if booking.lifecycle_key == 'awaiting_payment' %}
+        <a href="{% url 'bookings:booking_payment' booking.booking_id %}" class="btn btn-primary ph-btn-sm">Pay now</a>
+        {% endif %}
+        <a href="{% url 'dashboard:booking_chat' booking.booking_id %}" class="btn btn-outline ph-btn-sm">
+            <i data-lucide="message-square"></i> Chat
+        </a>
+        {% if booking.status == 'completed' and not booking.review %}
+        <button type="button" @click="openReviewModal('{{ booking.booking_id }}', '{{ booking.purohit.name|escapejs }}')" class="btn btn-primary ph-btn-sm review-trigger-btn">Rate &amp; review</button>
+        {% endif %}
+        {% if booking.status != 'cancelled' and booking.status != 'completed' and not booking.started_at %}
+        <button type="button" @click="confirmReschedule(bookings.find(b => b.id === '{{ booking.booking_id }}'))" class="btn btn-outline ph-btn-sm is-warn">Reschedule</button>
+        <button type="button" @click="confirmCancellation('{{ booking.booking_id }}')" class="btn btn-outline ph-btn-sm is-danger">Cancel</button>
+        {% endif %}
+    </div>
+
+    {% if booking.review %}
+    <aside class="ph-review review-container">
+        <div class="ph-review-rating">
+            {% include 'dashboard/partials/review_stars.html' with rating=booking.review.rating %}
+            <button type="button" class="ph-review-edit" @click="openReviewModal('{{ booking.booking_id }}', '{{ booking.purohit.name|escapejs }}', {{ booking.review.rating }}, '{{ booking.review.title|escapejs }}', '{{ booking.review.comment|escapejs }}')">
+                <i data-lucide="edit-3"></i>
+            </button>
+        </div>
+        {% if booking.review.comment %}<p>“{{ booking.review.comment|truncatechars:160 }}”</p>{% endif %}
+    </aside>
+    {% else %}
+    <div class="review-container"></div>
+    {% endif %}
+
+    {% if booking.reschedule_status == 'pending' and booking.reschedule_requested_by_customer %}
+    <aside class="ph-note is-warn">
+        <strong>Your reschedule is waiting</strong>
+        <p>{{ booking.purohit.name }} still needs to answer.</p>
+        <p>Suggested: {{ booking.suggested_date|date:"d M, Y" }}{% if booking.suggested_time %} at {{ booking.suggested_time|time:"H:i" }}{% endif %}</p>
+        {% if booking.reschedule_reason %}<p>Reason: {{ booking.reschedule_reason }}</p>{% endif %}
+    </aside>
+    {% elif booking.reschedule_status == 'pending' and booking.reschedule_requested_by_purohit %}
+    <aside class="ph-note is-warn ph-note-row">
+        <div>
+            <strong>{{ booking.purohit.name }} asked to move this</strong>
+            <p>Suggested: {{ booking.suggested_date|date:"d M, Y" }}{% if booking.suggested_time %} at {{ booking.suggested_time|time:"H:i" }}{% endif %}</p>
+            {% if booking.reschedule_reason %}<p>Reason: {{ booking.reschedule_reason }}</p>{% endif %}
+        </div>
+        <div class="ph-note-actions">
+            <form method="POST" action="{% url 'dashboard:handle_reschedule' booking.booking_id %}">
+                {% csrf_token %}<input type="hidden" name="action" value="reject">
+                <button type="submit" class="btn btn-outline ph-btn-sm is-danger">Decline</button>
+            </form>
+            <form method="POST" action="{% url 'dashboard:handle_reschedule' booking.booking_id %}">
+                {% csrf_token %}<input type="hidden" name="action" value="accept">
+                <button type="submit" class="btn btn-primary ph-btn-sm">Accept new time</button>
+            </form>
+        </div>
+    </aside>
+    {% endif %}
+</article>

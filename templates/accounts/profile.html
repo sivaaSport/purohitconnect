@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile | PurohitConnect{% endblock %}
+
+{% block content %}
+<div class="container" style="padding: var(--spacing-xl) var(--spacing-md); max-width: 980px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: var(--spacing-xl);">
+        <div>
+            <h1 style="margin: 0 0 6px;">My Profile</h1>
+            <p style="margin: 0; color: var(--color-text-muted);">
+                {% if profile_user.role == 'purohit' %}
+                    Update how devotees see you — photo, bio, and past puja media.
+                {% else %}
+                    Keep your devotee profile and photo up to date.
+                {% endif %}
+            </p>
+        </div>
+        {% if profile_user.role == 'purohit' and purohit %}
+        <a href="{% url 'purohits:detail' purohit.slug %}" class="btn btn-outline">View public profile</a>
+        {% endif %}
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr; gap: var(--spacing-xl);">
+        <style>
+            @media (min-width: 900px) {
+                .profile-layout { grid-template-columns: 280px 1fr !important; }
+            }
+        </style>
+
+        <div class="profile-layout" style="display: grid; grid-template-columns: 1fr; gap: var(--spacing-xl); align-items: start;">
+            <div class="card" style="text-align: center;">
+                <div style="width: 140px; height: 140px; border-radius: 50%; margin: 0 auto 14px; overflow: hidden; border: 3px solid var(--color-primary); background: var(--color-bg-main);">
+                    {% if profile_user.avatar %}
+                    <img src="{{ profile_user.avatar.url }}" alt="Profile photo" style="width: 100%; height: 100%; object-fit: cover;">
+                    {% else %}
+                    <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: var(--color-primary);">
+                        <i data-lucide="user" style="width: 56px; height: 56px;"></i>
+                    </div>
+                    {% endif %}
+                </div>
+                <h2 style="margin: 0 0 4px; font-size: 1.25rem;">
+                    {% if purohit %}{{ purohit.name }}{% else %}{{ profile_user.get_full_name|default:profile_user.username }}{% endif %}
+                </h2>
+                <div style="font-size: 0.85rem; color: var(--color-text-muted); text-transform: capitalize; margin-bottom: 12px;">
+                    {% if profile_user.role == 'purohit' %}Purohit{% else %}Devotee{% endif %}
+                    {% if profile_user.phone %} · {{ profile_user.phone }}{% endif %}
+                </div>
+                <form method="POST" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 8px;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="save_profile">
+                    <label class="btn btn-outline" style="cursor: pointer; padding: 0.55rem 0.9rem;">
+                        Upload photo
+                        <input type="file" name="avatar" accept="image/*" style="display: none;" onchange="this.form.submit()">
+                    </label>
+                </form>
+                {% if profile_user.avatar %}
+                <form method="POST" style="margin-top: 8px;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="remove_avatar">
+                    <button type="submit" class="btn btn-outline" style="width: 100%; padding: 0.45rem; font-size: 0.8rem; color:#EF4444; border-color:#EF4444;">Remove photo</button>
+                </form>
+                {% endif %}
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top: 0;">Profile details</h3>
+                <form method="POST" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 14px;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="save_profile">
+
+                    {% if profile_user.role == 'purohit' %}
+                    <div>
+                        <label style="display:block; font-weight:600; margin-bottom:6px;">Display name</label>
+                        <input type="text" name="display_name" value="{{ purohit.name }}" required
+                               style="width:100%; padding:0.75rem; border-radius:10px; border:1px solid var(--color-border); background:var(--color-bg-main); color:var(--color-text-main);">
+                    </div>
+                    {% endif %}
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div>
+                            <label style="display:block; font-weight:600; margin-bottom:6px;">First name</label>
+                            <input type="text" name="first_name" value="{{ profile_user.first_name }}"
+                                   style="width:100%; padding:0.75rem; border-radius:10px; border:1px solid var(--color-border); background:var(--color-bg-main); color:var(--color-text-main);">
+                        </div>
+                        <div>
+                            <label style="display:block; font-weight:600; margin-bottom:6px;">Last name</label>
+                            <input type="text" name="last_name" value="{{ profile_user.last_name }}"
+                                   style="width:100%; padding:0.75rem; border-radius:10px; border:1px solid var(--color-border); background:var(--color-bg-main); color:var(--color-text-main);">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="display:block; font-weight:600; margin-bottom:6px;">City</label>
+                        <select name="city" style="width:100%; padding:0.75rem; border-radius:10px; border:1px solid var(--color-border); background:var(--color-bg-main); color:var(--color-text-main);">
+                            <option value="">Select city…</option>
+                            {% for city in cities %}
+                            <option value="{{ city.id }}" {% if profile_user.city_id == city.id %}selected{% endif %}>{{ city.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    {% if profile_user.role == 'purohit' %}
+                    <div>
+                        <label style="display:block; font-weight:600; margin-bottom:6px;">Years of experience</label>
+                        <input type="number" name="experience_years" min="0" max="80" value="{{ profile_user.purohit_profile.experience_years }}"
+                               style="width:100%; padding:0.75rem; border-radius:10px; border:1px solid var(--color-border); background:var(--color-bg-main); color:var(--color-text-main);">
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; margin-bottom:6px;">About you</label>
+                        <textarea name="about" rows="4" placeholder="Share your tradition, specialties, and how you conduct pujas…"
+                                  style="width:100%; padding:0.75rem; border-radius:10px; border:1px solid var(--color-border); background:var(--color-bg-main); color:var(--color-text-main);">{{ profile_user.purohit_profile.about }}</textarea>
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; margin-bottom:6px;">Languages</label>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            {% for lang in languages %}
+                            <label style="display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; border:1px solid var(--color-border); font-size:0.85rem;">
+                                <input type="checkbox" name="languages" value="{{ lang.id }}" {% if lang.id in selected_language_ids %}checked{% endif %}>
+                                {{ lang.name }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-primary" style="align-self:flex-start; padding:0.65rem 1.25rem;">Save profile</button>
+                </form>
+            </div>
+        </div>
+
+        {% if profile_user.role == 'purohit' and purohit %}
+        <div class="card" id="gallery">
+            <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:14px;">
+                <div>
+                    <h3 style="margin:0;">Puja gallery</h3>
+                    <p style="margin:4px 0 0; color:var(--color-text-muted); font-size:0.9rem;">Add photos or videos from past pujas. Devotees see these on your public profile.</p>
+                </div>
+                <span style="font-size:0.8rem; color:var(--color-text-muted);">{{ gallery|length }} / 36</span>
+            </div>
+
+            <form method="POST" enctype="multipart/form-data" style="display:grid; grid-template-columns:1fr; gap:10px; margin-bottom:18px; padding:14px; border:1px dashed var(--color-border); border-radius:14px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="upload_gallery">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <input type="text" name="title" placeholder="Title (e.g. Satyanarayan at home)"
+                           style="padding:0.7rem; border-radius:10px; border:1px solid var(--color-border); background:var(--color-bg-main); color:var(--color-text-main);">
+                    <input type="text" name="caption" placeholder="Short caption (optional)"
+                           style="padding:0.7rem; border-radius:10px; border:1px solid var(--color-border); background:var(--color-bg-main); color:var(--color-text-main);">
+                </div>
+                <input type="file" name="media_file" accept="image/*,video/*" required
+                       style="padding:0.55rem; border-radius:10px; border:1px solid var(--color-border); background:var(--color-bg-main); color:var(--color-text-main);">
+                <label style="display:inline-flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--color-text-muted);">
+                    <input type="checkbox" name="is_featured"> Feature on profile
+                </label>
+                <button type="submit" class="btn btn-primary" style="justify-self:start; padding:0.55rem 1rem;">Add to gallery</button>
+            </form>
+
+            {% if gallery %}
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:12px;">
+                {% for item in gallery %}
+                <div style="border:1px solid var(--color-border); border-radius:14px; overflow:hidden; background:var(--color-bg-main);">
+                    <div style="aspect-ratio:4/3; background:#0b1020; position:relative;">
+                        {% if item.media_type == 'video' %}
+                        <video src="{{ item.file.url }}" controls style="width:100%; height:100%; object-fit:cover;"></video>
+                        {% else %}
+                        <img src="{{ item.file.url }}" alt="{{ item.title|default:'Puja photo' }}" style="width:100%; height:100%; object-fit:cover;">
+                        {% endif %}
+                        {% if item.is_featured %}
+                        <span style="position:absolute; top:8px; left:8px; background:rgba(245,158,11,0.95); color:#111; font-size:0.68rem; font-weight:800; padding:3px 8px; border-radius:999px;">FEATURED</span>
+                        {% endif %}
+                    </div>
+                    <div style="padding:10px;">
+                        <div style="font-weight:700; font-size:0.9rem;">{{ item.title|default:item.get_media_type_display }}</div>
+                        {% if item.caption %}<div style="font-size:0.78rem; color:var(--color-text-muted); margin-top:2px;">{{ item.caption }}</div>{% endif %}
+                        <div style="display:flex; gap:6px; margin-top:8px;">
+                            <form method="POST" style="flex:1;">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="toggle_featured">
+                                <input type="hidden" name="media_id" value="{{ item.id }}">
+                                <button type="submit" class="btn btn-outline" style="width:100%; padding:5px; font-size:0.72rem;">{% if item.is_featured %}Unfeature{% else %}Feature{% endif %}</button>
+                            </form>
+                            <form method="POST" style="flex:1;" onsubmit="return confirm('Remove this gallery item?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_gallery">
+                                <input type="hidden" name="media_id" value="{{ item.id }}">
+                                <button type="submit" class="btn btn-outline" style="width:100%; padding:5px; font-size:0.72rem; color:#EF4444; border-color:#EF4444;">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align:center; padding:24px; color:var(--color-text-muted); border:1px dashed var(--color-border); border-radius:14px;">
+                No gallery items yet. Add a photo or short video from a recent puja.
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

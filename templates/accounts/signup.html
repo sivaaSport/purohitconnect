@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}Join PurohitConnect | Sign Up{% endblock %}
+
+{% block extra_head %}
+<style>
+    .auth-shell input[type="radio"]:checked + .role-selector {
+        border-color: var(--color-primary) !important;
+        background: rgba(250, 204, 21, 0.12) !important;
+    }
+    .phone-input {
+        position: relative;
+    }
+    .phone-input input {
+        padding-left: 3rem;
+    }
+    .phone-prefix {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--color-text-muted);
+        font-weight: 500;
+        pointer-events: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container auth-shell" style="padding: var(--spacing-2xl) var(--spacing-md); display: flex; justify-content: center;">
+    <div class="card" style="width: 100%; max-width: 500px; padding: var(--spacing-xl);">
+        <div style="text-align: center; margin-bottom: var(--spacing-xl);">
+            <div style="width: 64px; height: 64px; background: rgba(250, 204, 21, 0.14); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--spacing-md); color: var(--color-primary);">
+                <i data-lucide="user-plus" style="width: 32px; height: 32px;"></i>
+            </div>
+            <h1 style="margin-bottom: 0.5rem; font-size: 1.8rem;">Create Your Account</h1>
+            <p style="color: var(--color-text-muted);">Join the community of devotees and verified Purohits</p>
+        </div>
+
+        <form method="POST" action="{% url 'accounts:send_otp' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="signup">
+            
+            <div style="margin-bottom: var(--spacing-md);">
+                <label style="display: block; font-weight: 500; margin-bottom: var(--spacing-sm);">I am a:</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+                    <label style="cursor: pointer;">
+                        <input type="radio" name="role" value="customer" checked style="display: none;" id="role-customer">
+                        <div onclick="document.getElementById('role-customer').checked=true" style="text-align: center; padding: var(--spacing-md); border: 2px solid var(--color-border); border-radius: var(--radius-md); transition: all 0.2s;" class="role-selector">
+                            <i data-lucide="user" style="margin-bottom: 0.25rem;"></i>
+                            <div style="font-weight: 600;">Devotee</div>
+                        </div>
+                    </label>
+                    <label style="cursor: pointer;">
+                        <input type="radio" name="role" value="purohit" style="display: none;" id="role-purohit">
+                        <div onclick="document.getElementById('role-purohit').checked=true" style="text-align: center; padding: var(--spacing-md); border: 2px solid var(--color-border); border-radius: var(--radius-md); transition: all 0.2s;" class="role-selector">
+                            <i data-lucide="award" style="margin-bottom: 0.25rem;"></i>
+                            <div style="font-weight: 600;">Purohit</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div style="margin-bottom: var(--spacing-md);">
+                <label style="display: block; font-weight: 500; margin-bottom: var(--spacing-sm);">Phone Number</label>
+                <div class="phone-input">
+                    <span class="phone-prefix">+91</span>
+                    <input type="tel" name="phone" required placeholder="9876543210" 
+                           pattern="[6-9][0-9]{9}" maxlength="10"
+                           style="width: 100%; padding: 0.75rem; padding-left: 3rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: var(--font-body);">
+                </div>
+                <small style="color: var(--color-text-muted); font-size: 0.8rem;">Enter 10-digit mobile number</small>
+            </div>
+
+            <div style="margin-bottom: var(--spacing-md);">
+                <label style="display: block; font-weight: 500; margin-bottom: var(--spacing-sm);">Username (Optional)</label>
+                <input type="text" name="username" placeholder="Pick a unique username" style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: var(--font-body);">
+                <small style="color: var(--color-text-muted); font-size: 0.8rem;">Leave blank for auto-generated username</small>
+            </div>
+
+            <div style="margin-bottom: var(--spacing-lg);">
+                <label style="display: block; font-weight: 500; margin-bottom: var(--spacing-sm);">Email Address (Optional)</label>
+                <input type="email" name="email" placeholder="your@email.com" style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: var(--font-body);">
+            </div>
+            
+            <button type="submit" 
+                    style="width: 100%; padding: 0.875rem; background: var(--color-primary); color: #111827; border: none; border-radius: var(--radius-md); font-weight: 600; cursor: pointer; transition: transform 0.2s;"
+                    onmouseover="this.style.transform='translateY(-1px)'"
+                    onmouseout="this.style.transform='translateY(0)'">
+                Send OTP
+            </button>
+        </form>
+        
+        <div style="margin-top: var(--spacing-lg); text-align: center; font-size: 0.9rem; border-top: 1px solid var(--color-border); padding-top: var(--spacing-md);">
+            <p style="color: var(--color-text-muted);">Already have an account? <a href="{% url 'accounts:login' %}" style="color: var(--color-primary); font-weight: 500;">Login here</a></p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const phoneInput = document.querySelector('input[name="phone"]');
+    
+    phoneInput.addEventListener('input', function(e) {
+        // Remove any non-digit characters
+        this.value = this.value.replace(/\D/g, '');
+        
+        // Limit to 10 digits
+        if (this.value.length > 10) {
+            this.value = this.value.slice(0, 10);
+        }
+    });
+});
+</script>
+{% endblock %}

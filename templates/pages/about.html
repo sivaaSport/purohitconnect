@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}About Us | PurohitConnect{% endblock %}
+
+{% block extra_head %}
+<style>
+    [data-theme="dark"] .about-shell .card {
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(17, 24, 39, 0.84));
+    }
+    [data-theme="light"] .about-shell .card {
+        background: #FFFFFF;
+        border-color: rgba(15, 23, 42, 0.12);
+        color: #0F172A;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container about-shell" style="padding: var(--spacing-xl) var(--spacing-md); max-width: 800px;">
+    <div style="text-align: center; margin-bottom: var(--spacing-2xl);">
+        <h1 style="margin-bottom: var(--spacing-sm);">About PurohitConnect</h1>
+        <p style="color: var(--color-text-muted); font-size: 1.1rem;">Bridging the gap between devotees and verified spiritual guides.</p>
+    </div>
+
+    <div class="card" style="margin-bottom: var(--spacing-xl);">
+        <h2 style="margin-bottom: var(--spacing-md); color: var(--color-primary);">Our Mission</h2>
+        <p style="color: var(--color-text-main); line-height: 1.6; margin-bottom: var(--spacing-md);">
+            At PurohitConnect, our mission is to simplify the process of organizing sacred ceremonies. We understand that finding a knowledgeable, verified, and available Purohit can be a challenging task in today's fast-paced world. Our platform is designed to seamlessly connect devotees with experienced Pandits for all their spiritual and religious needs.
+        </p>
+        <p style="color: var(--color-text-main); line-height: 1.6;">
+            We strive to preserve our rich cultural heritage by making authentic Vedic rituals accessible, transparent, and hassle-free for everyone.
+        </p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--spacing-lg); margin-bottom: var(--spacing-xl);">
+        <div class="card" style="text-align: center;">
+            <div style="width: 64px; height: 64px; background: #FFF3E0; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--spacing-md); color: var(--color-primary);">
+                <i data-lucide="shield-check" style="width: 32px; height: 32px;"></i>
+            </div>
+            <h3 style="margin-bottom: 0.5rem;">Verified Purohits</h3>
+            <p style="color: var(--color-text-muted); font-size: 0.95rem;">Every Purohit on our platform undergoes a strict verification process to ensure authenticity and profound Vedic knowledge.</p>
+        </div>
+
+        <div class="card" style="text-align: center;">
+            <div style="width: 64px; height: 64px; background: #FFF3E0; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--spacing-md); color: var(--color-primary);">
+                <i data-lucide="indian-rupee" style="width: 32px; height: 32px;"></i>
+            </div>
+            <h3 style="margin-bottom: 0.5rem;">Transparent Pricing</h3>
+            <p style="color: var(--color-text-muted); font-size: 0.95rem;">No hidden costs. Clear, upfront pricing for both the Puja packages and the authentic Samagri kits.</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 style="margin-bottom: var(--spacing-md); color: var(--color-primary);">How It Works</h2>
+        <ol style="color: var(--color-text-main); line-height: 1.6; padding-left: 1.5rem; margin-bottom: 0;">
+            <li style="margin-bottom: 0.5rem;"><strong>Discover:</strong> Browse our directory of verified Purohits based on your location, language preference, and the specific Puja you need.</li>
+            <li style="margin-bottom: 0.5rem;"><strong>Select:</strong> Review detailed Purohit profiles, read reviews from other devotees, and explore the packages they offer.</li>
+            <li style="margin-bottom: 0.5rem;"><strong>Book:</strong> Choose your preferred date, provide your location details, and instantly send a booking request.</li>
+            <li><strong>Connect:</strong> Receive a fast confirmation and connect directly with the Purohit via WhatsApp to finalize the preparations.</li>
+        </ol>
+    </div>
+</div>
+{% endblock %}

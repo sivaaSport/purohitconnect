@@ -1,0 +1,29 @@
+{% if day_fully_blocked %}
+<div style="padding: 14px; border-radius: 12px; border: 1px dashed rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); color: #FCA5A5; font-size: 0.9rem;">
+    {{ blocked_message|default:"Purohit is unavailable all day." }}
+</div>
+{% elif not slots %}
+<div style="padding: 14px; border-radius: 12px; border: 1px dashed var(--color-border); color: var(--color-text-muted); font-size: 0.9rem;">
+    No time slots could be generated for this ritual duration.
+</div>
+{% else %}
+<div style="margin-bottom: 8px; font-size: 0.8rem; color: var(--color-text-muted);">
+    Showing {{ duration_hours }}h ritual windows · {{ available_count }} open
+</div>
+<div class="pc-slot-grid">
+    {% for slot in slots %}
+                <label class="pc-slot-chip {% if not slot.available %}is-disabled{% endif %}" title="{{ slot.reason }}">
+        <input type="radio" name="time" value="{{ slot.value }}" {% if not slot.available %}disabled{% else %}required{% endif %}>
+        <span>
+            {{ slot.label }}
+            {% if not slot.available %}
+            <div class="pc-slot-meta">{{ slot.status|title }}</div>
+            {% endif %}
+        </span>
+    </label>
+    {% endfor %}
+</div>
+{% if available_count == 0 %}
+<p style="margin: 10px 0 0; font-size: 0.85rem; color: #FCA5A5;">No open slots on this date. Try another day.</p>
+{% endif %}
+{% endif %}

@@ -1,0 +1,13 @@
+{% if items %}
+<div class="pc-venue-block">
+    {% if caption %}<span class="pc-venue-caption">{{ caption }}</span>{% endif %}
+    <div class="pc-venues">
+        {% for item in items %}
+        <span class="pc-venue-chip"><i data-lucide="{{ item.icon }}"></i> {{ item.label }}</span>
+        {% endfor %}
+    </div>
+    {% if note %}
+    <p class="pc-venue-note">{{ note }}</p>
+    {% endif %}
+</div>
+{% endif %}

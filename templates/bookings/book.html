@@ -1,0 +1,631 @@
+{% extends 'base.html' %}
+{% load l10n %}
+
+{% block title %}Book {{ package.puja.name }} with {{ package.purohit.name }} | PurohitConnect{% endblock %}
+
+{% block extra_head %}
+{% include 'components/calendar_styles.html' %}
+<style>
+    [data-theme="dark"] .booking-shell .card {
+        border-color: rgba(250, 204, 21, 0.3) !important;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(17, 24, 39, 0.84));
+    }
+    [data-theme="light"] .booking-shell .card {
+        background: #FFFFFF !important;
+        border-color: rgba(15, 23, 42, 0.12) !important;
+    }
+    [data-theme="light"] .booking-shell input,
+    [data-theme="light"] .booking-shell select,
+    [data-theme="light"] .booking-shell textarea {
+        background: #FFFFFF !important;
+        color: #0F172A !important;
+    }
+    .book-selected-date {
+        display: none;
+        margin: 0 0 10px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: #fffbeb;
+        border: 1px solid #f59e0b;
+        color: #92400e;
+        font-size: 0.85rem;
+        font-weight: 800;
+    }
+    [data-theme="dark"] .book-selected-date {
+        background: rgba(250, 204, 21, 0.12);
+        border-color: #facc15;
+        color: #fde68a;
+    }
+    .pc-venue-caption {
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+        margin-bottom: 4px;
+        text-align: center;
+    }
+    .pc-venues { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+    .pc-venue-chip {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 3px 8px; border-radius: 999px;
+        background: rgba(217, 119, 6, 0.1);
+        color: var(--color-secondary);
+        font-size: 0.72rem; font-weight: 700;
+    }
+    .pc-venue-chip i { width: 12px; height: 12px; }
+    .pc-venue-note { margin: 6px 0 0; font-size: 0.8rem; color: var(--color-text-muted); }
+    .pc-venue-pick {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 10px;
+        margin-bottom: var(--spacing-lg);
+    }
+    .pc-venue-option {
+        display: block;
+        padding: 12px 14px;
+        border: 1px solid var(--color-border);
+        border-radius: 14px;
+        cursor: pointer;
+        background: var(--color-bg-main);
+    }
+    .pc-venue-option:has(input:checked) {
+        border-color: #d97706;
+        box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.18);
+        background: #fffbeb;
+    }
+    [data-theme="dark"] .pc-venue-option:has(input:checked) {
+        background: rgba(250, 204, 21, 0.1);
+        border-color: #facc15;
+    }
+    .pc-venue-option strong { display: block; }
+    .pc-coverage-note { margin: 0 0 1rem; color: var(--color-text-muted); font-size: 0.88rem; }
+    .pc-cover-status {
+        margin: 0 0 1rem;
+        padding: 14px 16px;
+        border-radius: 14px;
+        border: 1px solid var(--color-border);
+        background: var(--color-bg-main);
+    }
+    .pc-cover-status h4 { margin: 0 0 6px; font-size: 1.05rem; }
+    .pc-cover-status p { margin: 0; font-size: 0.92rem; line-height: 1.45; color: var(--color-text-muted); }
+    .pc-cover-status.is-ok { background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.28); }
+    .pc-cover-status.is-ask { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.32); }
+    .pc-cover-status.is-date { background: rgba(59, 130, 246, 0.08); border-color: rgba(59, 130, 246, 0.28); }
+    .pc-cover-status.is-closed { background: rgba(148, 163, 184, 0.12); border-color: rgba(148, 163, 184, 0.3); }
+    .pc-cover-places { margin: 0 0 1.25rem; }
+    .pc-cover-places p {
+        margin: 0 0 8px;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--color-text-muted);
+    }
+    .pc-cover-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pc-cover-chip {
+        border: 1px solid var(--color-border);
+        background: var(--color-bg-card);
+        color: var(--color-text-main);
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    .pc-cover-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .pc-cover-chip.is-active {
+        border-color: #d97706;
+        background: #fffbeb;
+        color: #92400e;
+    }
+    [data-theme="dark"] .pc-cover-chip.is-active {
+        background: rgba(250, 204, 21, 0.12);
+        color: #fde68a;
+        border-color: #facc15;
+    }
+    #travel-request-form { display: none; margin: 0 0 1.25rem; padding: 14px 16px; border: 1px dashed rgba(217, 119, 6, 0.45); border-radius: 14px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container booking-shell" style="padding: var(--spacing-xl) var(--spacing-md); max-width: 920px;">
+    
+    <div style="margin-bottom: var(--spacing-xl); text-align: center;">
+        <h1 style="margin-bottom: 0.5rem;">Pick date &amp; timing</h1>
+        <p style="color: var(--color-text-muted);">{{ package.puja.name }} with {{ package.purohit.name }} · ~{{ duration_hours }}h ritual</p>
+        <div style="display:flex; justify-content:center; margin-top:10px;">
+            {% include 'pujas/partials/venue_chips.html' with items=package.get_venue_items note=package.venue_notes caption='This purohit performs at' %}
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom: var(--spacing-xl); border: 2px solid var(--color-primary);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-border); padding-bottom: var(--spacing-md); margin-bottom: var(--spacing-md); flex-wrap: wrap; gap: 12px;">
+            <div>
+                <h3 style="margin-bottom: 0.25rem;">{{ package.puja.name }}</h3>
+                <p style="color: var(--color-text-muted); font-size: 0.9rem;">with {{ package.purohit.name }}</p>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-secondary);">₹{{ package.price|floatformat:"0" }}</div>
+                <div style="font-size: 0.8rem; color: var(--color-text-muted);">Base price</div>
+            </div>
+        </div>
+        
+        <form method="POST" action="{% url 'bookings:book' package.id %}" id="booking-complete-form">
+            {% csrf_token %}
+
+            <div style="display: grid; grid-template-columns: 1fr; gap: var(--spacing-xl); margin-bottom: var(--spacing-xl);">
+                <style>
+                    @media (min-width: 800px) {
+                        .book-schedule-grid { grid-template-columns: 1.05fr 1fr !important; }
+                    }
+                </style>
+                <div class="book-schedule-grid" style="display: grid; grid-template-columns: 1fr; gap: var(--spacing-lg);">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <label style="font-weight: 700;">Choose a date *</label>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <a href="?cal_year={{ cal_prev_year }}&cal_month={{ cal_prev_month }}{% if preselected_date %}&date={{ preselected_date|date:'Y-m-d' }}{% endif %}" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;">‹</a>
+                                <strong style="font-size: 0.9rem;">{{ cal_month_label }}</strong>
+                                <a href="?cal_year={{ cal_next_year }}&cal_month={{ cal_next_month }}{% if preselected_date %}&date={{ preselected_date|date:'Y-m-d' }}{% endif %}" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;">›</a>
+                            </div>
+                        </div>
+                        <input type="hidden" name="date" id="booking-date" required value="{% if preselected_date %}{{ preselected_date|date:'Y-m-d' }}{% endif %}">
+                        <div id="selected-date-label" class="book-selected-date"{% if preselected_date %} style="display:block"{% endif %}>Selected date: <span>{% if preselected_date %}{{ preselected_date|date:'M j, Y' }}{% endif %}</span></div>
+                        <div class="pc-cal-grid pc-cal-head">
+                            <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
+                        </div>
+                        <div class="pc-cal-grid" id="devotee-calendar">
+                            {% for week in booking_calendar_weeks %}
+                                {% for day in week %}
+                                    {% if day.in_month %}
+                                    <button type="button"
+                                            class="pc-cal-day status-{{ day.status }} {% if day.is_today %}is-today{% endif %}{% if preselected_date and day.date == preselected_date %} is-selected{% endif %}"
+                                            data-date="{{ day.date|date:'Y-m-d' }}"
+                                            data-label="{{ day.date|date:'M j, Y' }}"
+                                            {% if day.is_past or day.status == 'full' %}disabled{% endif %}
+                                            title="{% if day.status == 'full' %}Fully booked / blocked{% elif day.status == 'partial' %}Some timings open{% else %}Open{% endif %}"
+                                            onclick="selectBookingDate(this)">
+                                        {{ day.date.day }}
+                                    </button>
+                                    {% else %}
+                                    <div></div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                        <div class="pc-cal-legend">
+                            <span><i class="pc-cal-dot" style="background: rgba(16,185,129,0.45);"></i> Open</span>
+                            <span><i class="pc-cal-dot" style="background: rgba(245,158,11,0.55);"></i> Limited</span>
+                            <span><i class="pc-cal-dot" style="background: rgba(239,68,68,0.45);"></i> Full / blocked</span>
+                            <span><i class="pc-cal-dot" style="background: #b45309;"></i> Selected</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-weight: 700; margin-bottom: 10px;">Choose a time window *</label>
+                        <div id="time-slot-picker"
+                             hx-get="{% url 'purohits:available_slots' package.purohit.slug %}?duration={{ duration_hours }}"
+                             hx-trigger="load-slots from:body"
+                             hx-include="#booking-date"
+                             hx-vals='{"duration": "{{ duration_hours }}"}'
+                             hx-swap="innerHTML">
+                            <div style="padding: 18px; border: 1px dashed var(--color-border); border-radius: 12px; color: var(--color-text-muted); font-size: 0.9rem;">
+                                Select an open date to see ritual start times.
+                            </div>
+                        </div>
+                        <p style="margin: 10px 0 0; font-size: 0.8rem; color: var(--color-text-muted);">
+                            Each chip is this purohit's {{ duration_hours }}h ritual window for {{ package.puja.name }},
+                            with a {{ buffer_minutes }}-minute buffer afterward.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <h3 style="margin-bottom: var(--spacing-md); margin-top: var(--spacing-xl); border-bottom: 1px solid var(--color-border); padding-bottom: 0.5rem;">Where will the ritual happen?</h3>
+            <p class="pc-coverage-note">
+                {{ package.purohit.name }} is based in {{ coverage.base_label }}, {{ coverage.city_name }}
+                {% if coverage.serves_labels %} and always offers {{ coverage.serves_labels|join:", " }}{% endif %}.
+                {% if coverage.visit_labels %} Visiting {{ coverage.visit_labels|join:", " }}.{% endif %}
+            </p>
+            {% if coverage.accepts_travel_requests %}
+            <p class="pc-coverage-note">If they do not already offer your place on that date, you can request a visit. You pay only after they accept and you book.</p>
+            {% endif %}
+            {% if travel_note or package_venue_notes %}
+            <p class="pc-coverage-note">{{ package_venue_notes|default:travel_note }}</p>
+            {% endif %}
+            {% if accepted_request %}
+            <p class="pc-coverage-note" style="color: var(--color-primary); font-weight: 700;">
+                {{ package.purohit.name }} accepted your visit to {{ accepted_request.area.name }}, {{ accepted_request.city.name }}
+                on {{ accepted_request.preferred_date|date:"d M Y" }}
+                {% if accepted_request.travel_fee %} · Travel fee ₹{{ accepted_request.travel_fee|floatformat:"0" }}{% endif %}.
+                Book within 48 hours to keep this unlock.
+            </p>
+            {% endif %}
+
+            {{ areas_by_city|json_script:"areas-by-city" }}
+            {{ coverage_payload|json_script:"coverage-payload" }}
+            <div class="pc-venue-pick">
+                {% for item in venue_options %}
+                <label class="pc-venue-option">
+                    <input type="radio" name="venue_type" value="{{ item.code }}" {% if venue_options|length == 1 or forloop.first %}checked{% endif %} onchange="syncBookingLocation()">
+                    <strong>{{ item.label }}</strong>
+                </label>
+                {% endfor %}
+            </div>
+
+            <div id="offered-places" class="pc-cover-places">
+                <p>Places they already offer — tap to use one</p>
+                <div class="pc-cover-chips" id="offered-place-chips"></div>
+            </div>
+
+            <div id="location-fields" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--spacing-lg); margin-bottom: var(--spacing-lg);">
+                <div>
+                    <label style="display: block; font-weight: 500; margin-bottom: var(--spacing-sm);">City *</label>
+                    <select name="city" id="booking-city" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: var(--font-body);">
+                        <optgroup label="They already offer">
+                        {% for city in cities %}
+                            {% if city.id in offered_city_ids %}
+                            <option value="{{ city.id }}" {% if city.id == package.purohit.city_id %}selected{% endif %}>{{ city.name }}</option>
+                            {% endif %}
+                        {% endfor %}
+                        </optgroup>
+                        <optgroup label="Other cities — request a visit first">
+                        {% for city in cities %}
+                            {% if city.id not in offered_city_ids %}
+                            <option value="{{ city.id }}">{{ city.name }}</option>
+                            {% endif %}
+                        {% endfor %}
+                        </optgroup>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-weight: 500; margin-bottom: var(--spacing-sm);">Area *</label>
+                    <select name="area" id="booking-area" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: var(--font-body);">
+                    </select>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: var(--spacing-lg);">
+                <label id="address-label" style="display: block; font-weight: 500; margin-bottom: var(--spacing-sm);">Full Address *</label>
+                <textarea name="address" id="booking-address" required rows="3" style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: var(--font-body);" placeholder="House / flat, street, landmark"></textarea>
+            </div>
+
+            <div id="coverage-status" class="pc-cover-status" role="status" aria-live="polite"></div>
+            <div id="travel-request-form">
+                <h3 style="margin: 0 0 0.5rem;">Request a visit</h3>
+                <p class="pc-coverage-note" id="request-copy">They do not already offer this place on that date. Ask first — they decide, and you pay only after they accept and you book.</p>
+                <label style="display:block; font-weight:500; margin-bottom: var(--spacing-sm);">Message to the purohit (optional)</label>
+                <textarea name="message" rows="2" placeholder="Why this date or place matters" style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: var(--font-body);"></textarea>
+            </div>
+            
+            <h3 style="margin-bottom: var(--spacing-md); margin-top: var(--spacing-xl); border-bottom: 1px solid var(--color-border); padding-bottom: 0.5rem;">Requirements</h3>
+            
+            <div style="margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--color-bg-main); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                <label style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
+                    <input type="checkbox" name="needs_samagri" style="margin-top: 0.25rem; width: 18px; height: 18px;">
+                    <div>
+                        <div style="font-weight: 500;">Include Samagri Kit</div>
+                        <div style="font-size: 0.9rem; color: var(--color-text-muted);">
+                            {% if package.includes_samagri %}
+                                Already included in base price.
+                            {% elif package.samagri_price %}
+                                Add authentic puja materials for ₹{{ package.samagri_price|floatformat:"0" }} extra.
+                            {% else %}
+                                Not provided by this purohit. Please arrange locally.
+                            {% endif %}
+                        </div>
+                    </div>
+                </label>
+            </div>
+            
+            <div style="margin-bottom: var(--spacing-xl);">
+                <label style="display: block; font-weight: 500; margin-bottom: var(--spacing-sm);">Special Requests (Optional)</label>
+                <textarea name="special_requests" rows="2" placeholder="E.g., Any specific traditions, parking instructions, etc." style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: var(--font-body);"></textarea>
+            </div>
+            
+            <div style="background: var(--color-bg-main); padding: var(--spacing-lg); border-radius: var(--radius-md); border: 1px solid var(--color-border); margin-bottom: var(--spacing-xl); display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 1.2rem; font-weight: 600;">Total Amount</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-primary);">₹<span id="display-total">{{ package.price|floatformat:"0" }}</span></div>
+            </div>
+            <p id="travel-fee-line" class="pc-coverage-note" style="display:none;">Includes travel fee ₹<span id="travel-fee-amount">0</span>.</p>
+            
+            <div id="book-actions" style="display: flex; gap: var(--spacing-md); justify-content: flex-end; flex-wrap: wrap;">
+                <a href="{% url 'purohits:detail' package.purohit.slug %}" class="btn btn-outline">Cancel</a>
+                <button type="button" id="choose-offered-place" class="btn btn-outline" hidden>Use a place they offer</button>
+                <button type="submit" id="confirm-book" class="btn btn-primary" style="padding-left: 2rem; padding-right: 2rem;">Confirm Booking</button>
+                <button type="submit" id="send-travel-request" formaction="{% url 'bookings:request_travel' package.id %}" class="btn btn-primary" hidden>Send travel request</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function selectBookingDate(btn) {
+        const date = btn.getAttribute('data-date');
+        document.getElementById('booking-date').value = date;
+        document.querySelectorAll('#devotee-calendar .pc-cal-day').forEach(function(el) {
+            el.classList.toggle('is-selected', el === btn);
+        });
+        const label = document.getElementById('selected-date-label');
+        if (label) {
+            label.style.display = 'block';
+            label.querySelector('span').textContent = btn.getAttribute('data-label') || date;
+        }
+        if (window.htmx) {
+            htmx.ajax('GET',
+                '{% url "purohits:available_slots" package.purohit.slug %}?date=' + encodeURIComponent(date) + '&duration={{ duration_hours }}',
+                {target: '#time-slot-picker', swap: 'innerHTML'}
+            );
+        }
+        if (typeof updateCoverageUI === 'function') updateCoverageUI();
+    }
+
+    const samagriCheckbox = document.querySelector('input[name="needs_samagri"]');
+    const displayTotal = document.getElementById('display-total');
+    const basePrice = {{ package.price|unlocalize }};
+    const samagriPrice = {% if package.samagri_price and not package.includes_samagri %}{{ package.samagri_price|unlocalize }}{% else %}0{% endif %};
+    
+    if (samagriCheckbox && samagriPrice > 0) {
+        samagriCheckbox.addEventListener('change', function() {
+            if (typeof updateCoverageUI === 'function') updateCoverageUI();
+            else displayTotal.textContent = this.checked ? (basePrice + samagriPrice).toFixed(0) : basePrice.toFixed(0);
+        });
+    } else if (samagriCheckbox && ({{ package.includes_samagri|yesno:"true,false" }} || samagriPrice === 0)) {
+        samagriCheckbox.disabled = true;
+        if ({{ package.includes_samagri|yesno:"true,false" }}) samagriCheckbox.checked = true;
+    }
+
+    const bookingLocation = {
+        homeCityId: '{{ package.purohit.city_id }}',
+        travelFee: {% if accepted_request %}{{ accepted_request.travel_fee|unlocalize }}{% else %}0{% endif %},
+        accepted: {% if accepted_request %}{
+            cityId: '{{ accepted_request.city_id }}',
+            areaId: '{{ accepted_request.area_id }}',
+            date: '{{ accepted_request.preferred_date|date:"Y-m-d" }}',
+            address: '{{ accepted_request.address|escapejs }}'
+        }{% else %}null{% endif %},
+        purohitPlace: {
+            cityId: '{{ package.purohit.city_id }}',
+            areaId: '{{ purohit_place_area.id|default:"" }}',
+            address: '{{ purohit_place_address|escapejs }}'
+        }
+    };
+
+    function selectedVenue() {
+        const picked = document.querySelector('input[name="venue_type"]:checked');
+        return picked ? picked.value : '';
+    }
+
+    function fillAreaOptions(areas, preferredId) {
+        const areaEl = document.getElementById('booking-area');
+        if (!areaEl) return;
+        areaEl.innerHTML = (areas || []).map(function (area) {
+            const selected = String(area.id) === String(preferredId) ? ' selected' : '';
+            return '<option value="' + area.id + '"' + selected + '>' + area.name + '</option>';
+        }).join('');
+    }
+
+    function coverageData() {
+        return JSON.parse((document.getElementById('coverage-payload') || {}).textContent || '{}');
+    }
+
+    function placeMatches(offer, cityId, areaId) {
+        if (String(offer.cityId) !== String(cityId)) return false;
+        if (offer.areaId === null || offer.areaId === '' || offer.areaId === undefined) return true;
+        return String(offer.areaId) === String(areaId);
+    }
+
+    function coverageState(cityId, areaId, dateStr, venue) {
+        const coverage = coverageData();
+        if (venue === 'purohit') {
+            return { mode: 'covered', title: 'This ritual is at their place', body: 'Location is already set. You can book and pay now.' };
+        }
+        const cityName = (document.querySelector('#booking-city option:checked') || {}).textContent || 'this city';
+        const areaName = (document.querySelector('#booking-area option:checked') || {}).textContent || 'this area';
+        const places = coverage.places || [];
+        const permanents = coverage.permanent || [];
+        for (let i = 0; i < permanents.length; i++) {
+            if (placeMatches(permanents[i], cityId, areaId)) {
+                return { mode: 'covered', title: 'They already offer this place', body: cityName + ' / ' + areaName + ' is on their list. You can book and pay now.' };
+            }
+        }
+        const visitMatches = places.filter(function (offer) {
+            return offer.kind === 'visit' && placeMatches(offer, cityId, areaId);
+        });
+        if (visitMatches.length) {
+            const inWindow = visitMatches.find(function (offer) {
+                return dateStr && offer.start && offer.end && dateStr >= offer.start && dateStr <= offer.end;
+            });
+            if (inWindow) {
+                return { mode: 'covered', title: 'They are visiting then', body: inWindow.label + '. You can book this date.' };
+            }
+            const windows = visitMatches.map(function (offer) { return offer.label; }).join('; ');
+            if (!dateStr) {
+                return { mode: 'need_date', title: 'Pick a date in their visit window', body: 'They visit here on: ' + windows + '. Choose one of those dates above to book, or another date to request a visit.' };
+            }
+            return { mode: coverage.acceptsTravel === false ? 'closed' : 'ask', title: 'That date is outside their visit', body: 'They visit here on: ' + windows + '. Pick one of those dates to book, or request this date.' };
+        }
+        if (bookingLocation.accepted &&
+            String(bookingLocation.accepted.cityId) === String(cityId) &&
+            String(bookingLocation.accepted.areaId) === String(areaId) &&
+            bookingLocation.accepted.date === dateStr) {
+            return { mode: 'covered', title: 'They accepted this visit', body: 'This unlock is open. Book now to keep it.' };
+        }
+        if (coverage.acceptsTravel === false) {
+            return { mode: 'closed', title: 'They do not offer this place', body: cityName + ' / ' + areaName + ' is not on their list, and they are not taking travel requests. Choose one of their places below.' };
+        }
+        return { mode: 'ask', title: 'Ask them to visit this place', body: 'They do not already offer ' + areaName + ', ' + cityName + ' on that date. Send a request first. They decide, and you pay only after they accept and you book.' };
+    }
+
+    function isCovered(cityId, areaId, dateStr) {
+        return coverageState(cityId, areaId, dateStr, selectedVenue()).mode === 'covered';
+    }
+
+    function renderOfferedPlaces() {
+        const wrap = document.getElementById('offered-place-chips');
+        if (!wrap) return;
+        const coverage = coverageData();
+        const cityId = (document.getElementById('booking-city') || {}).value;
+        const areaId = (document.getElementById('booking-area') || {}).value;
+        wrap.innerHTML = (coverage.places || []).map(function (place) {
+            const active = placeMatches(place, cityId, areaId) ? ' is-active' : '';
+            return '<button type="button" class="pc-cover-chip' + active + '" data-city="' + place.cityId + '" data-area="' + (place.areaId || '') + '">' + place.label + '</button>';
+        }).join('');
+        wrap.querySelectorAll('.pc-cover-chip').forEach(function (chip) {
+            chip.addEventListener('click', function () {
+                pickOfferedPlace(chip.getAttribute('data-city'), chip.getAttribute('data-area'));
+            });
+        });
+    }
+
+    function pickOfferedPlace(cityId, areaId) {
+        const cityEl = document.getElementById('booking-city');
+        const areaEl = document.getElementById('booking-area');
+        if (!cityEl) return;
+        cityEl.value = cityId;
+        syncBookingLocation();
+        if (areaEl && areaId) areaEl.value = areaId;
+        updateCoverageUI();
+        cityEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function updateCoverageUI() {
+        const venue = selectedVenue();
+        const cityEl = document.getElementById('booking-city');
+        const areaEl = document.getElementById('booking-area');
+        const dateEl = document.getElementById('booking-date');
+        const statusEl = document.getElementById('coverage-status');
+        const requestForm = document.getElementById('travel-request-form');
+        const confirmBtn = document.getElementById('confirm-book');
+        const requestBtn = document.getElementById('send-travel-request');
+        const chooseBtn = document.getElementById('choose-offered-place');
+        const feeLine = document.getElementById('travel-fee-line');
+        const feeAmount = document.getElementById('travel-fee-amount');
+        const state = coverageState(cityEl.value, areaEl.value, dateEl.value, venue);
+        const covered = state.mode === 'covered';
+        const canAsk = state.mode === 'ask' || (state.mode === 'need_date' && coverageData().acceptsTravel !== false && dateEl.value);
+        const fee = (covered && bookingLocation.accepted && isCovered(cityEl.value, areaEl.value, dateEl.value))
+            ? Number(bookingLocation.travelFee || 0) : 0;
+        if (feeLine && feeAmount) {
+            feeLine.style.display = fee > 0 ? 'block' : 'none';
+            feeAmount.textContent = fee.toFixed(0);
+        }
+        if (displayTotal) {
+            const samagriOn = samagriCheckbox && samagriCheckbox.checked && samagriPrice > 0;
+            displayTotal.textContent = (basePrice + (samagriOn ? samagriPrice : 0) + fee).toFixed(0);
+        }
+        if (statusEl) {
+            statusEl.className = 'pc-cover-status is-' + ({
+                covered: 'ok', ask: 'ask', need_date: 'date', closed: 'closed'
+            }[state.mode] || 'ask');
+            statusEl.innerHTML = '<h4>' + state.title + '</h4><p>' + state.body + '</p>';
+        }
+        if (requestForm) requestForm.style.display = canAsk ? 'block' : 'none';
+        if (confirmBtn) confirmBtn.hidden = !covered;
+        if (requestBtn) {
+            requestBtn.hidden = !canAsk;
+            requestBtn.disabled = !dateEl.value;
+        }
+        if (chooseBtn) {
+            chooseBtn.hidden = covered;
+            chooseBtn.onclick = function () {
+                const first = document.querySelector('#offered-place-chips .pc-cover-chip');
+                if (first) first.focus();
+                document.getElementById('offered-places').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            };
+        }
+        renderOfferedPlaces();
+    }
+
+    function syncBookingLocation() {
+        const venue = selectedVenue();
+        const cityEl = document.getElementById('booking-city');
+        const areaEl = document.getElementById('booking-area');
+        const addressEl = document.getElementById('booking-address');
+        const label = document.getElementById('address-label');
+        const areasByCity = JSON.parse((document.getElementById('areas-by-city') || {}).textContent || '{}');
+
+        if (venue === 'purohit') {
+            cityEl.value = bookingLocation.purohitPlace.cityId;
+            fillAreaOptions(
+                [{ id: bookingLocation.purohitPlace.areaId, name: '{{ purohit_place_area.name|default:package.purohit.city.name|escapejs }}' }],
+                bookingLocation.purohitPlace.areaId
+            );
+            cityEl.disabled = true;
+            areaEl.disabled = true;
+            addressEl.value = bookingLocation.purohitPlace.address;
+            addressEl.readOnly = true;
+            if (label) label.textContent = "Purohit's place";
+            updateCoverageUI();
+            return;
+        }
+
+        cityEl.disabled = false;
+        areaEl.disabled = false;
+        addressEl.readOnly = false;
+        if (bookingLocation.accepted) {
+            cityEl.value = bookingLocation.accepted.cityId;
+            if (bookingLocation.accepted.address && !addressEl.value) {
+                addressEl.value = bookingLocation.accepted.address;
+            }
+        }
+        const cityAreas = areasByCity[cityEl.value] || areasByCity[String(cityEl.value)] || [];
+        fillAreaOptions(cityAreas, bookingLocation.accepted ? bookingLocation.accepted.areaId : areaEl.value);
+        const placeholders = {
+            home: 'House / flat, street, landmark',
+            temple: 'Temple name and locality',
+            teerth: 'Ghat / teerth name',
+            other: 'Venue name and address'
+        };
+        const labels = {
+            home: 'Home address *',
+            temple: 'Temple name *',
+            teerth: 'Teerth / ghat *',
+            other: 'Venue details *'
+        };
+        addressEl.placeholder = placeholders[venue] || placeholders.home;
+        if (label) label.textContent = labels[venue] || labels.home;
+        if (venue !== 'purohit' && addressEl.value === bookingLocation.purohitPlace.address) {
+            addressEl.value = '';
+        }
+        updateCoverageUI();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const selected = document.querySelector('#devotee-calendar .pc-cal-day.is-selected:not([disabled])');
+        if (selected) selectBookingDate(selected);
+        const cityEl = document.getElementById('booking-city');
+        const areaEl = document.getElementById('booking-area');
+        if (cityEl) cityEl.addEventListener('change', syncBookingLocation);
+        if (areaEl) areaEl.addEventListener('change', updateCoverageUI);
+        document.querySelectorAll('#booking-city optgroup').forEach(function (group) {
+            if (!group.querySelector('option')) group.hidden = true;
+        });
+        syncBookingLocation();
+    });
+
+    document.getElementById('booking-complete-form').addEventListener('submit', function(e) {
+        const isRequest = e.submitter && e.submitter.id === 'send-travel-request';
+        const cityEl = document.getElementById('booking-city');
+        const areaEl = document.getElementById('booking-area');
+        if (cityEl) cityEl.disabled = false;
+        if (areaEl) areaEl.disabled = false;
+        if (!document.getElementById('booking-date').value) {
+            e.preventDefault();
+            alert(isRequest ? 'Please select a date so the purohit knows when you need them.' : 'Please select a date from the calendar.');
+            return;
+        }
+        if (!isRequest && !document.querySelector('#time-slot-picker input[name="time"]:checked')) {
+            e.preventDefault();
+            alert('Please select an available time window.');
+            return;
+        }
+        if (isRequest && !(document.getElementById('booking-address') || {}).value.trim()) {
+            e.preventDefault();
+            alert('Please enter the place details.');
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,13 @@
+Django>=5.2,<6
+psycopg2-binary>=2.9
+python-dotenv
+django-environ
+django-htmx
+django-filter
+Pillow
+django-imagekit
+razorpay
+twilio
+django-extensions
+whitenoise
+gunicorn>=22.0

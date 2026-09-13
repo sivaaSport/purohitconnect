@@ -1,0 +1,11 @@
+{% with rating=rating|default:0 %}
+<div class="ph-stars" role="img" aria-label="{{ rating }} out of 5 stars">
+    {% for n in "12345" %}
+    <svg class="ph-star{% if rating >= forloop.counter %} is-on{% endif %}" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+              {% if rating >= forloop.counter %}fill="#F59E0B" stroke="#F59E0B"{% else %}fill="none" stroke="#D6D3D1"{% endif %}
+              stroke-width="1.6" stroke-linejoin="round"></path>
+    </svg>
+    {% endfor %}
+</div>
+{% endwith %}

@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify OTP | PurohitConnect{% endblock %}
+
+{% block extra_head %}
+<style>
+    .otp-inputs {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        margin: var(--spacing-lg) 0;
+    }
+    .otp-input {
+        width: 3rem;
+        height: 3rem;
+        text-align: center;
+        font-size: 1.5rem;
+        font-weight: 600;
+        border: 2px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-bg-main);
+        color: var(--color-text-main);
+        transition: all 0.2s;
+    }
+    .otp-input:focus {
+        border-color: var(--color-primary);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.1);
+    }
+    .timer {
+        font-size: 0.9rem;
+        color: var(--color-text-muted);
+        text-align: center;
+        margin-bottom: var(--spacing-md);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container auth-shell" style="padding: var(--spacing-2xl) var(--spacing-md); display: flex; justify-content: center;">
+    <div class="card" style="width: 100%; max-width: 450px; padding: var(--spacing-xl);">
+        <div style="text-align: center; margin-bottom: var(--spacing-xl);">
+            <div style="width: 64px; height: 64px; background: rgba(16, 185, 129, 0.14); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--spacing-md); color: #10b981;">
+                <i data-lucide="shield-check" style="width: 32px; height: 32px;"></i>
+            </div>
+            <h1 style="margin-bottom: 0.5rem; font-size: 1.8rem;">Verify Your Phone</h1>
+            <p style="color: var(--color-text-muted);">Enter the 6-digit code sent to <strong>{{ phone }}</strong></p>
+            {% if mock_otp %}
+            <div style="margin-top: var(--spacing-md); padding: 0.85rem 1rem; border-radius: var(--radius-md); background: rgba(250, 204, 21, 0.12); border: 1px solid rgba(250, 204, 21, 0.35); text-align: left;">
+                <div style="font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 0.25rem;">Development mode — SMS not configured</div>
+                <div style="font-weight: 700; letter-spacing: 0.2em; font-size: 1.4rem; color: var(--color-primary);">{{ mock_otp }}</div>
+                <div style="font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.35rem;">Enter this OTP to continue. Real SMS will work after Twilio credentials are set.</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <form method="POST" action="{% url 'accounts:verify_otp' %}" id="otp-form">
+            {% csrf_token %}
+            
+            <div class="otp-inputs">
+                <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code">
+                <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code">
+                <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code">
+                <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code">
+                <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code">
+                <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code">
+            </div>
+            
+            <input type="hidden" name="otp" id="otp-hidden">
+            
+            <div class="timer" id="timer">
+                Resend OTP in <span id="countdown">30</span> seconds
+            </div>
+            
+            <button type="submit" id="verify-btn"
+                    style="width: 100%; padding: 0.875rem; background: var(--color-primary); color: #111827; border: none; border-radius: var(--radius-md); font-weight: 600; cursor: pointer; transition: transform 0.2s; margin-bottom: var(--spacing-md);"
+                    onmouseover="this.style.transform='translateY(-1px)'"
+                    onmouseout="this.style.transform='translateY(0)'">
+                Verify OTP
+            </button>
+            
+            <button type="button" id="resend-btn" disabled
+                    style="width: 100%; padding: 0.875rem; background: var(--color-bg-card); color: var(--color-text-muted); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-weight: 600; cursor: not-allowed;">
+                Resend OTP
+            </button>
+        </form>
+
+        <div style="text-align: center; margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--color-border);">
+            <p style="color: var(--color-text-muted); margin-bottom: var(--spacing-md);">Wrong phone number?</p>
+            <a href="{% url start_over_url %}" 
+               style="color: var(--color-primary); text-decoration: none; font-weight: 500;">
+                Start Over
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const otpInputs = document.querySelectorAll('.otp-input');
+    const hiddenInput = document.getElementById('otp-hidden');
+    const form = document.getElementById('otp-form');
+    const resendBtn = document.getElementById('resend-btn');
+    const timerElement = document.getElementById('timer');
+    const countdownElement = document.getElementById('countdown');
+    
+    let countdown = 30;
+    let timerInterval;
+    
+    // Auto-focus first input
+    otpInputs[0].focus();
+    
+    // Handle OTP input navigation
+    otpInputs.forEach((input, index) => {
+        input.addEventListener('input', function(e) {
+            // Only allow digits
+            this.value = this.value.replace(/\D/g, '');
+            
+            // Auto-move to next input
+            if (this.value && index < otpInputs.length - 1) {
+                otpInputs[index + 1].focus();
+            }
+            
+            // Update hidden input
+            updateHiddenInput();
+        });
+        
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && !this.value && index > 0) {
+                otpInputs[index - 1].focus();
+            }
+        });
+        
+        input.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const paste = (e.clipboardData || window.clipboardData).getData('text');
+            const digits = paste.replace(/\D/g, '').slice(0, 6);
+            
+            digits.split('').forEach((digit, i) => {
+                if (otpInputs[index + i]) {
+                    otpInputs[index + i].value = digit;
+                }
+            });
+            
+            // Focus last filled input or next empty one
+            const nextIndex = Math.min(index + digits.length, otpInputs.length - 1);
+            otpInputs[nextIndex].focus();
+            updateHiddenInput();
+        });
+    });
+    
+    function updateHiddenInput() {
+        const otp = Array.from(otpInputs).map(input => input.value).join('');
+        hiddenInput.value = otp;
+    }
+    
+    // Countdown timer
+    function startTimer() {
+        timerInterval = setInterval(() => {
+            countdown--;
+            countdownElement.textContent = countdown;
+            
+            if (countdown <= 0) {
+                clearInterval(timerInterval);
+                timerElement.style.display = 'none';
+                resendBtn.disabled = false;
+                resendBtn.style.cursor = 'pointer';
+                resendBtn.style.background = 'var(--color-primary)';
+                resendBtn.style.color = 'white';
+                resendBtn.style.border = 'none';
+            }
+        }, 1000);
+    }
+    
+    startTimer();
+    
+    // Resend OTP
+    resendBtn.addEventListener('click', function() {
+        if (this.disabled) return;
+        
+        fetch('{% url "accounts:resend_otp" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: new URLSearchParams({
+                'phone': '{{ phone }}',
+                'action': '{{ action }}'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reset timer
+                countdown = 30;
+                countdownElement.textContent = countdown;
+                timerElement.style.display = 'block';
+                this.disabled = true;
+                this.style.cursor = 'not-allowed';
+                this.style.background = 'var(--color-bg-card)';
+                this.style.color = 'var(--color-text-muted)';
+                this.style.border = '1px solid var(--color-border)';
+                startTimer();
+                
+                // Show success message
+                showMessage('OTP sent successfully!', 'success');
+            } else {
+                showMessage(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showMessage('Failed to resend OTP. Please try again.', 'error');
+        });
+    });
+    
+    function showMessage(message, type) {
+        // Remove existing messages
+        const existing = document.querySelector('.message-alert');
+        if (existing) existing.remove();
+        
+        const alert = document.createElement('div');
+        alert.className = `message-alert`;
+        alert.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            font-weight: 500;
+            z-index: 1000;
+            max-width: 300px;
+        `;
+        
+        if (type === 'success') {
+            alert.style.background = '#10b981';
+            alert.style.color = 'white';
+        } else {
+            alert.style.background = '#ef4444';
+            alert.style.color = 'white';
+        }
+        
+        alert.textContent = message;
+        document.body.appendChild(alert);
+        
+        setTimeout(() => {
+            alert.remove();
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}

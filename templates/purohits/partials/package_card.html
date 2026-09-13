@@ -1,0 +1,58 @@
+<div class="card package-card{% if is_focus %} is-selected{% endif %}"
+     id="package-card-{{ package.id }}"
+     data-package-id="{{ package.id }}"
+     data-package-name="{{ package.puja.name|escape }}"
+     role="button"
+     tabindex="0"
+     aria-pressed="{% if is_focus %}true{% else %}false{% endif %}"
+     onclick="selectPackage('{{ package.id }}', '{{ package.puja.name|escapejs }}')"
+     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectPackage('{{ package.id }}', '{{ package.puja.name|escapejs }}');}">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h3 style="margin-bottom: 0.25rem;">{{ package.puja.name }} <span class="package-selected-flag">Selected</span></h3>
+            <p style="color: var(--color-text-muted); font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="clock" style="width: 14px; height: 14px;"></i> {{ package.get_duration_hours }} hours with this purohit
+            </p>
+            {% include 'pujas/partials/venue_chips.html' with items=package.get_venue_items note=package.venue_notes caption='This purohit performs at' %}
+        </div>
+        <div style="text-align: right;">
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-secondary);">₹{{ package.price|floatformat:"0" }}</div>
+            <div style="font-size: 0.8rem; color: var(--color-text-muted);">Base price</div>
+        </div>
+    </div>
+
+    <p style="color: var(--color-text-muted); font-size: 0.95rem;">
+        {{ package.custom_description|default:package.puja.description }}
+    </p>
+
+    <div style="background: var(--color-bg-main); padding: var(--spacing-md); border-radius: var(--radius-md); border: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <i data-lucide="package" style="color: var(--color-primary);"></i>
+            <div>
+                <div style="font-weight: 500;">Samagri Kit</div>
+                <div style="font-size: 0.85rem; color: var(--color-text-muted);">
+                    {% if package.includes_samagri %}
+                        Included in base price
+                    {% elif package.samagri_price %}
+                        Available for extra ₹{{ package.samagri_price|floatformat:"0" }}
+                    {% else %}
+                        Not provided by purohit
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-outline package-select-btn" style="padding: 0.4rem 1rem;"
+                    onclick="event.stopPropagation(); selectPackage('{{ package.id }}', '{{ package.puja.name|escapejs }}')">
+                {% if is_focus %}✓ Selected{% else %}Select{% endif %}
+            </button>
+            <a href="{% url 'bookings:book' package.id %}"
+               class="btn btn-primary package-book-now"
+               data-package-id="{{ package.id }}"
+               style="padding: 0.4rem 1rem;"
+               onclick="event.stopPropagation();">
+                Book Now
+            </a>
+        </div>
+    </div>
+</div>

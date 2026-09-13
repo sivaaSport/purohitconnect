@@ -1,0 +1,26 @@
+{% with coverage=purohit.get_coverage_summary %}
+<div class="pc-coverage">
+    <div class="pc-coverage-line">
+        <i data-lucide="map-pin"></i>
+        Based in {{ coverage.base_label }}, {{ coverage.city_name }}
+    </div>
+    {% if coverage.serves_labels %}
+    <div class="pc-coverage-line">
+        <i data-lucide="route"></i>
+        Serves {{ coverage.serves_labels|join:", " }}
+    </div>
+    {% endif %}
+    {% if coverage.visit_labels %}
+    <div class="pc-coverage-line">
+        <i data-lucide="calendar-range"></i>
+        Visiting {{ coverage.visit_labels|join:", " }}
+    </div>
+    {% endif %}
+    {% if coverage.accepts_travel_requests %}
+    <p class="pc-coverage-note">Open to travel requests if this place is not already offered.</p>
+    {% endif %}
+    {% if coverage.travel_note %}
+    <p class="pc-coverage-note">{{ coverage.travel_note }}</p>
+    {% endif %}
+</div>
+{% endwith %}

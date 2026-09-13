@@ -1,0 +1,54 @@
+<div class="card" style="position: sticky; top: 100px;">
+    <h3 style="margin-bottom: var(--spacing-md); display: flex; align-items: center; gap: 0.5rem;">
+        <i data-lucide="filter" style="width: 20px; height: 20px;"></i> Filters
+    </h3>
+    
+    <form id="filter-form" hx-get="{% url 'purohits:list' %}" hx-target="#purohit-grid" hx-trigger="change, submit" hx-push-url="true">
+        {% if search_query %}
+            <input type="hidden" name="q" value="{{ search_query }}">
+        {% endif %}
+
+        <div style="margin-bottom: var(--spacing-lg);">
+            <label style="display: block; font-weight: 500; margin-bottom: var(--spacing-sm);">City</label>
+            <select name="city" style="width: 100%; padding: 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: var(--font-body); font-size: 1rem; background: var(--color-bg-main); color: var(--color-text-main);">
+                <option value="">All Cities</option>
+                {% for city in cities %}
+                    <option value="{{ city.id }}" {% if selected_city == city.id %}selected{% endif %}>
+                        {{ city.name }}{% if city.state %}, {{ city.state }}{% endif %}
+                    </option>
+                {% empty %}
+                    <option value="" disabled>No cities available</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div style="margin-bottom: var(--spacing-lg);">
+            <label style="display: block; font-weight: 500; margin-bottom: var(--spacing-sm);">Puja Type</label>
+            <select name="puja" style="width: 100%; padding: 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: var(--font-body); font-size: 1rem; background: var(--color-bg-main); color: var(--color-text-main);">
+                <option value="">All Pujas</option>
+                {% for puja in pujas %}
+                    <option value="{{ puja.id }}" {% if selected_puja == puja.id %}selected{% endif %}>{{ puja.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div style="margin-bottom: var(--spacing-lg);">
+            <label style="display: block; font-weight: 500; margin-bottom: var(--spacing-sm);">Language Spoken</label>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="radio" name="language" value="" {% if not selected_language %}checked{% endif %}> Any Language
+                </label>
+                {% for language in languages %}
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="radio" name="language" value="{{ language.id }}" {% if selected_language == language.id %}checked{% endif %}>
+                        {{ language.name }}{% if language.native_name %} ({{ language.native_name }}){% endif %}
+                    </label>
+                {% empty %}
+                    <span style="color: var(--color-text-muted); font-size: 0.9rem;">No languages configured</span>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Apply Filters</button>
+    </form>
+</div>

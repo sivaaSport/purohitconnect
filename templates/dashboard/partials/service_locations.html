@@ -1,0 +1,163 @@
+<section id="service-locations" class="pc-catalog ph-chapter" aria-labelledby="service-locations-heading" x-data="{ addAlways: false, addVisit: false }">
+    <div class="ph-chapter-head">
+        <div>
+            <p class="pc-catalog-kicker">Coverage</p>
+            <h2 id="service-locations-heading">Service locations</h2>
+            <p>
+                You are listed as based in <strong>{{ purohit.base_area.name|default:purohit.city.name }}</strong>, {{ purohit.city.name }}.
+                Permanent places can be booked any open day. Dated visits unlock a city only between those dates.
+                If a devotee wants somewhere else, they send a travel request first.
+            </p>
+        </div>
+        <div class="pc-catalog-count">{{ permanent_offers|length }} always · {{ visit_offers|length }} visit{{ visit_offers|length|pluralize }}</div>
+    </div>
+
+    {{ service_areas_by_city|json_script:"service-areas-by-city" }}
+
+    {% if permanent_offers or visit_offers %}
+    <div class="ph-table" role="table" aria-label="Places you already cover">
+        <div class="ph-table-head" role="row">
+            <span>Place</span>
+            <span>Type</span>
+            <span>When devotees can book</span>
+            <span>Note</span>
+            <span></span>
+        </div>
+        {% for offer in permanent_offers %}
+        <article class="ph-table-row" role="row">
+            <div>
+                <strong>{{ offer.place_label }}</strong>
+                <small>{% if offer.area %}{{ offer.city.name }}{% else %}Whole of {{ offer.city.name }}{% endif %}</small>
+            </div>
+            <div><span class="pc-loc-badge is-always">Always</span></div>
+            <div>Any open date on your calendar</div>
+            <div>{% if offer.note %}{{ offer.note }}{% else %}<span class="ph-muted">No extra note</span>{% endif %}</div>
+            <form method="POST" action="{% url 'dashboard:delete_service_offer' offer.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline ph-btn-sm is-danger">Remove</button>
+            </form>
+        </article>
+        {% endfor %}
+        {% for offer in visit_offers %}
+        <article class="ph-table-row" role="row">
+            <div>
+                <strong>{{ offer.place_label }}</strong>
+                <small>{% if offer.area %}{{ offer.city.name }}{% else %}Whole of {{ offer.city.name }}{% endif %}</small>
+            </div>
+            <div><span class="pc-loc-badge is-visit">Visit</span></div>
+            <div>{{ offer.start_date|date:"d M Y" }} – {{ offer.end_date|date:"d M Y" }}</div>
+            <div>{% if offer.note %}{{ offer.note }}{% else %}<span class="ph-muted">No extra note</span>{% endif %}</div>
+            <form method="POST" action="{% url 'dashboard:delete_service_offer' offer.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline ph-btn-sm is-danger">Remove</button>
+            </form>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="ph-empty">
+        <h3>No places listed yet</h3>
+        <p>Add your home city as a permanent place so devotees nearby can book you.</p>
+    </div>
+    {% endif %}
+
+    <div class="ph-add-bar">
+        <button type="button" class="btn btn-outline" @click="addAlways = !addAlways; addVisit = false" :aria-expanded="addAlways.toString()">
+            <span x-text="addAlways ? 'Close' : 'Add a permanent place'"></span>
+        </button>
+        <button type="button" class="btn btn-outline" @click="addVisit = !addVisit; addAlways = false" :aria-expanded="addVisit.toString()">
+            <span x-text="addVisit ? 'Close' : 'Add a dated visit'"></span>
+        </button>
+    </div>
+
+    <form method="POST" action="{% url 'dashboard:add_service_offer' %}" class="ph-add-form" x-show="addAlways" x-cloak>
+        {% csrf_token %}
+        <input type="hidden" name="kind" value="permanent">
+        <h3>Always take work here</h3>
+        <p>Pick a neighborhood, or leave area as whole city. Devotees can book this place on any open date.</p>
+        <div class="pc-service-grid">
+            <div class="pc-field">
+                <label>City</label>
+                <select name="city" class="js-offer-city" required>
+                    {% for city in service_cities %}
+                    <option value="{{ city.id }}" {% if city.id == purohit.city_id %}selected{% endif %}>{{ city.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="pc-field">
+                <label>Area</label>
+                <select name="area" class="js-offer-area">
+                    <option value="">Whole city</option>
+                </select>
+            </div>
+            <div class="pc-field pc-field-full">
+                <label>Note <span>(optional)</span></label>
+                <input type="text" name="note" maxlength="240" placeholder="e.g. Weekends only in this area">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary pc-policy-save">Add permanent place</button>
+    </form>
+
+    <form method="POST" action="{% url 'dashboard:add_service_offer' %}" class="ph-add-form" x-show="addVisit" x-cloak>
+        {% csrf_token %}
+        <input type="hidden" name="kind" value="visit">
+        <h3>Take work between dates</h3>
+        <p>Use this when you will be in another city for a few days. Devotees can book only inside that window.</p>
+        <div class="pc-service-grid">
+            <div class="pc-field">
+                <label>City</label>
+                <select name="city" class="js-offer-city" required>
+                    {% for city in service_cities %}
+                    <option value="{{ city.id }}">{{ city.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="pc-field">
+                <label>Area</label>
+                <select name="area" class="js-offer-area">
+                    <option value="">Whole city</option>
+                </select>
+            </div>
+            <div class="pc-field">
+                <label>From</label>
+                <input type="date" name="start_date" required>
+            </div>
+            <div class="pc-field">
+                <label>Until</label>
+                <input type="date" name="end_date" required>
+            </div>
+            <div class="pc-field pc-field-full">
+                <label>Note <span>(optional)</span></label>
+                <input type="text" name="note" maxlength="240" placeholder="e.g. Staying with family in Pune">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary pc-policy-save">Add dated visit</button>
+    </form>
+</section>
+<script>
+(function () {
+    var dataEl = document.getElementById('service-areas-by-city');
+    if (!dataEl) return;
+    var byCity = JSON.parse(dataEl.textContent || '{}');
+
+    function areasFor(cityId) {
+        return byCity[cityId] || byCity[String(cityId)] || [];
+    }
+
+    function fillAreas(select, cityId) {
+        if (!select) return;
+        select.innerHTML = '<option value="">Whole city</option>' + areasFor(cityId).map(function (area) {
+            return '<option value="' + area.id + '">' + area.name + '</option>';
+        }).join('');
+    }
+
+    document.querySelectorAll('.js-offer-city').forEach(function (citySelect) {
+        var form = citySelect.closest('form');
+        var areaSelect = form ? form.querySelector('.js-offer-area') : null;
+        fillAreas(areaSelect, citySelect.value);
+        citySelect.addEventListener('change', function () {
+            fillAreas(areaSelect, citySelect.value);
+        });
+    });
+})();
+</script>

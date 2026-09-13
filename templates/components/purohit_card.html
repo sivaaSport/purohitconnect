@@ -1,0 +1,72 @@
+<article class="card purohit-card{% if purohit.matched_package %} is-ritual-match{% endif %}" style="display: flex; flex-direction: column; height: 100%;">
+    <div style="display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-md);">
+        <div style="width: 80px; height: 80px; border-radius: var(--radius-full); background: var(--color-border); overflow: hidden; flex-shrink: 0;">
+            {% if purohit.profile.user.avatar %}
+                <img src="{{ purohit.profile.user.avatar.url }}" alt="{{ purohit.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+            {% else %}
+                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--color-bg-main); color: var(--color-text-muted);">
+                    <i data-lucide="user" style="width: 32px; height: 32px;"></i>
+                </div>
+            {% endif %}
+        </div>
+        <div>
+            <h3 style="margin-bottom: 0.25rem;">
+                <a href="{% url 'purohits:detail' purohit.slug %}{% if selected_puja %}?puja={{ selected_puja }}{% endif %}" style="color: var(--color-text-main);">{{ purohit.name }}</a>
+                {% if purohit.profile.is_verified %}
+                    <i data-lucide="badge-check" style="color: var(--color-primary); width: 18px; height: 18px; display: inline-block; vertical-align: middle;" title="Verified"></i>
+                {% endif %}
+            </h3>
+            <p style="color: var(--color-text-muted); font-size: 0.9rem; display: flex; align-items: center; gap: 0.25rem;">
+                <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i>
+                {{ purohit.base_area.name|default:purohit.city.name }}{% if purohit.base_area %}, {{ purohit.city.name }}{% endif %}
+            </p>
+            <div style="display: flex; align-items: center; gap: 0.25rem; margin-top: 0.25rem;">
+                <i data-lucide="star" style="width: 14px; height: 14px; color: var(--color-accent); fill: var(--color-accent);"></i>
+                <span style="font-weight: 500;">{{ purohit.avg_rating }}</span>
+            </div>
+        </div>
+    </div>
+
+    {% if purohit.matched_package %}
+    <div class="pc-match-ritual">
+        <div class="pc-match-kicker">Offers this ritual</div>
+        <div class="pc-match-title-row">
+            <h4>{{ purohit.matched_package.puja.name }}</h4>
+            <div class="pc-match-price">₹{{ purohit.matched_package.price|floatformat:"0" }}</div>
+        </div>
+        <p class="pc-match-meta">
+            <span><i data-lucide="clock"></i> {{ purohit.matched_package.get_duration_hours }}h</span>
+        </p>
+        {% include 'pujas/partials/venue_chips.html' with items=purohit.matched_package.get_venue_items caption='Performs at' %}
+        {% include 'purohits/partials/card_travel.html' %}
+    </div>
+    {% else %}
+    <div style="margin-bottom: var(--spacing-md); flex-grow: 1;">
+        <p style="font-size: 0.9rem; color: var(--color-text-muted); margin-bottom: 0.5rem;">
+            <strong>Exp:</strong> {{ purohit.profile.experience_years }} years
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
+            {% for lang in purohit.profile.languages_spoken.all|slice:":3" %}
+                <span style="background: var(--color-bg-main); padding: 2px 8px; border-radius: var(--radius-full); font-size: 0.8rem; color: var(--color-text-main); border: 1px solid var(--color-border);">{{ lang.name }}</span>
+            {% endfor %}
+            {% if purohit.profile.languages_spoken.count > 3 %}
+                <span style="background: var(--color-bg-main); padding: 2px 8px; border-radius: var(--radius-full); font-size: 0.8rem; color: var(--color-text-muted); border: 1px solid var(--color-border);">+{{ purohit.profile.languages_spoken.count|add:"-3" }}</span>
+            {% endif %}
+        </div>
+        {% include 'purohits/partials/card_travel.html' %}
+    </div>
+    {% endif %}
+
+    <div class="pc-card-actions">
+        {% if purohit.matched_package %}
+            <a href="{% url 'purohits:detail' purohit.slug %}?puja={{ selected_puja }}" class="btn btn-outline">Profile</a>
+            <a href="{% url 'bookings:book' purohit.matched_package.id %}" class="btn btn-primary">Book {{ purohit.matched_package.puja.name }}</a>
+        {% else %}
+            <div>
+                <span style="color: var(--color-text-muted); font-size: 0.8rem;">Starts from</span>
+                <div style="font-weight: 600; color: var(--color-secondary);">₹{{ purohit.base_price|floatformat:"0" }}</div>
+            </div>
+            <a href="{% url 'purohits:detail' purohit.slug %}" class="btn btn-outline" style="padding: 0.25rem 1rem;">View</a>
+        {% endif %}
+    </div>
+</article>

@@ -1,0 +1,46 @@
+<section id="incoming-bookings" class="ph-chapter" aria-labelledby="bookings-heading">
+    <div class="ph-chapter-head">
+        <div>
+            <p class="pc-catalog-kicker">Today's work</p>
+            <h2 id="bookings-heading">Bookings</h2>
+            <p>Accept new requests, start a ritual with the devotee’s code, and keep an eye on payments and travel fees.</p>
+        </div>
+        <div class="pc-catalog-count">{{ bookings|length }} total</div>
+    </div>
+
+    {% if bookings_need_you %}
+    <h3 class="ph-group-title">Needs you <span>{{ bookings_need_you|length }}</span></h3>
+    <div class="ph-book-list">
+        {% for booking in bookings_need_you %}
+            {% include 'dashboard/partials/purohit_booking_card.html' %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if bookings_upcoming %}
+    <h3 class="ph-group-title">Upcoming <span>{{ bookings_upcoming|length }}</span></h3>
+    <div class="ph-book-list">
+        {% for booking in bookings_upcoming %}
+            {% include 'dashboard/partials/purohit_booking_card.html' %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if bookings_past %}
+    <h3 class="ph-group-title">Completed and cancelled <span>{{ bookings_past|length }}</span></h3>
+    <div class="ph-book-list">
+        {% for booking in bookings_past %}
+            {% include 'dashboard/partials/purohit_booking_card.html' %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not bookings %}
+    <div class="ph-empty">
+        <i data-lucide="inbox"></i>
+        <h3>No bookings yet</h3>
+        <p>Add the pujas you offer so devotees can find and book you. Incoming work will land here first.</p>
+        <a href="#my-pujas" class="btn btn-primary">Add your first puja</a>
+    </div>
+    {% endif %}
+</section>

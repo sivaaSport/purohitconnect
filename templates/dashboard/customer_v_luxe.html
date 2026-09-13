@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+<!-- VERSION: CELESTIAL GRACE (DARK LUXURY) -->
+{% block title %}Spiritual Journey | Celestial Edition{% endblock %}
+
+{% block content %}
+<div class="luxe-dark-wrapper" x-data="{ timelineOpen: false, activeBooking: null, bookings: {{ bookings_json|safe }} }">
+    
+    <div class="container luxe-grid">
+        <!-- Sidebar Navigation (Luxe) -->
+        <aside class="luxe-sidebar">
+            <div class="luxe-profile">
+                <div class="luxe-avatar">{{ user.username|first|upper }}</div>
+                <h3>Welcome, {{ user.username }}</h3>
+                <p>Divine Seeker</p>
+            </div>
+            <nav class="luxe-nav">
+                <a href="#" class="active"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+                <a href="#"><i data-lucide="calendar"></i> Sacred Calendar</a>
+                <a href="#"><i data-lucide="heart"></i> Saved Pujas</a>
+                <a href="#"><i data-lucide="settings"></i> Sanctuary Settings</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content (Luxe) -->
+        <main class="luxe-main">
+            <div class="luxe-header">
+                <h1>Celestial Tracker</h1>
+                <div class="luxe-date-display">{{ now|date:"l, d F" }}</div>
+            </div>
+
+            {% if ongoing_booking %}
+            <div class="luxe-hero">
+                <div class="luxe-hero-inner">
+                    <div class="luxe-live-tag">
+                        <span class="luxe-pulse"></span> RITUAL IN PROGRESS
+                    </div>
+                    <h2>{{ ongoing_booking.puja_package.puja.name }}</h2>
+                    <div class="luxe-hero-meta">
+                        <span>Pt. {{ ongoing_booking.purohit.name }}</span>
+                        <span class="divider"></span>
+                        <span>{{ ongoing_booking.started_at|time:"H:i" }} IST</span>
+                    </div>
+                    
+                    <div class="luxe-hero-footer">
+                        <div class="luxe-otp-display">
+                            <label>COMPLETION KEY</label>
+                            <div class="otp-code">{{ ongoing_booking.complete_code }}</div>
+                        </div>
+                        <a href="{% url 'dashboard:booking_chat' ongoing_booking.booking_id %}" class="luxe-btn-gold">
+                            <i data-lucide="message-square"></i> Divine Messenger
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="luxe-card-list">
+                {% for booking in bookings %}
+                <div class="luxe-card" data-booking-id="{{ booking.booking_id }}">
+                    <div class="luxe-card-accent"></div>
+                    <div class="luxe-card-body">
+                        <div class="luxe-card-header">
+                            <div class="luxe-id">#{{ booking.booking_id }}</div>
+                            <div class="luxe-status status-{{ booking.status }}">{{ booking.get_status_display }}</div>
+                        </div>
+                        
+                        <div class="luxe-card-main">
+                            <div class="luxe-time-box">
+                                <span class="time">{{ booking.event_time|time:"H:i" }}</span>
+                                <span class="date">{{ booking.event_date|date:"d M" }}</span>
+                            </div>
+                            <div class="luxe-card-info">
+                                <h3>{{ booking.puja_package.puja.name }}</h3>
+                                <p>Lead by Pt. {{ booking.purohit.name }}</p>
+                            </div>
+                        </div>
+
+                        <div class="luxe-card-footer">
+                            <div class="review-container">
+                                {% if booking.review %}
+                                <div class="luxe-review-pill">
+                                    <span class="luxe-stars">
+                                        {% for i in "12345"|make_list %}
+                                        <i data-lucide="star" class="{% if forloop.counter <= booking.review.rating %}active{% endif %}"></i>
+                                        {% endfor %}
+                                    </span>
+                                    <button @click="openReviewModal('{{ booking.booking_id }}', '{{ booking.purohit.name }}', {{ booking.review.rating }}, '{{ booking.review.title|escapejs }}', '{{ booking.review.comment|escapejs }}')">
+                                        <i data-lucide="edit-3"></i>
+                                    </button>
+                                </div>
+                                {% elif booking.status == 'completed' %}
+                                <button @click="openReviewModal('{{ booking.booking_id }}', '{{ booking.purohit.name }}')" class="luxe-review-btn review-trigger-btn">Write Review</button>
+                                {% endif %}
+                            </div>
+
+                            <div class="luxe-card-actions">
+                                <a href="{% url 'dashboard:booking_chat' booking.booking_id %}" class="luxe-circle-btn"><i data-lucide="message-circle"></i></a>
+                                <button @click="activeBooking = bookings.find(b => b.id === '{{ booking.booking_id }}'); timelineOpen = true" class="luxe-circle-btn"><i data-lucide="activity"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+</div>
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Cinzel:wght@700;900&display=swap');
+
+    :root {
+        --luxe-bg: #0B0E14;
+        --luxe-card: #141820;
+        --luxe-gold: #FFD700;
+        --luxe-gold-soft: #D4AF37;
+        --luxe-border: rgba(255, 215, 0, 0.1);
+        --luxe-text: #E2E8F0;
+    }
+
+    body { background: var(--luxe-bg); color: var(--luxe-text); font-family: 'Outfit', sans-serif; margin: 0; }
+
+    .luxe-grid { display: grid; grid-template-columns: 280px 1fr; gap: 40px; min-height: 100vh; padding: 40px 0; }
+
+    /* Sidebar */
+    .luxe-sidebar { background: var(--luxe-card); border-radius: 32px; padding: 40px; border: 1px solid var(--luxe-border); height: fit-content; position: sticky; top: 40px; }
+    .luxe-avatar { width: 80px; height: 80px; background: linear-gradient(135deg, #FFD700 0%, #B8860B 100%); border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 800; color: #000; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(184, 134, 11, 0.3); }
+    .luxe-profile h3 { margin: 0; font-family: 'Cinzel', serif; font-size: 1.2rem; }
+    .luxe-profile p { color: #718096; margin: 5px 0 0; font-size: 0.9rem; }
+    .luxe-nav { margin-top: 50px; display: flex; flex-direction: column; gap: 10px; }
+    .luxe-nav a { padding: 15px 20px; border-radius: 16px; color: #718096; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 15px; transition: 0.3s; }
+    .luxe-nav a.active { background: rgba(255, 215, 0, 0.05); color: var(--luxe-gold); border: 1px solid var(--luxe-border); }
+
+    /* Main Content */
+    .luxe-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+    .luxe-header h1 { font-family: 'Cinzel', serif; margin: 0; letter-spacing: 2px; }
+    .luxe-date-display { color: #718096; font-weight: 600; }
+
+    .luxe-hero { 
+        background: linear-gradient(135deg, #1A1C23 0%, #0D0F14 100%); border-radius: 32px; padding: 40px; 
+        border: 1px solid var(--luxe-border); margin-bottom: 50px; position: relative; overflow: hidden;
+    }
+    .luxe-hero::before { content: ''; position: absolute; top: -50%; left: -20%; width: 500px; height: 500px; background: radial-gradient(circle, rgba(255,215,0,0.05) 0%, transparent 70%); }
+    
+    .luxe-live-tag { display: flex; align-items: center; gap: 10px; font-weight: 800; color: var(--luxe-gold); font-size: 0.75rem; letter-spacing: 2px; margin-bottom: 20px; }
+    .luxe-pulse { width: 8px; height: 8px; background: var(--luxe-gold); border-radius: 50%; box-shadow: 0 0 10px var(--luxe-gold); animation: pulse 2s infinite; }
+    .luxe-hero h2 { font-family: 'Cinzel', serif; font-size: 2.2rem; margin: 0 0 10px; }
+    .luxe-hero-meta { color: #718096; display: flex; align-items: center; gap: 15px; font-weight: 600; }
+    .luxe-hero-meta .divider { width: 4px; height: 4px; background: #4A5568; border-radius: 50%; }
+
+    .luxe-hero-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; }
+    .luxe-otp-display label { display: block; font-size: 0.7rem; font-weight: 800; color: #718096; margin-bottom: 5px; letter-spacing: 1px; }
+    .otp-code { font-size: 2.2rem; font-weight: 900; letter-spacing: 10px; color: var(--luxe-gold); font-family: 'Outfit', monospace; }
+    .luxe-btn-gold { background: var(--luxe-gold); color: #000; padding: 18px 36px; border-radius: 20px; text-decoration: none; font-weight: 800; display: flex; align-items: center; gap: 12px; transition: 0.3s; }
+    .luxe-btn-gold:hover { transform: scale(1.05); box-shadow: 0 10px 25px rgba(255, 215, 0, 0.2); }
+
+    .luxe-card-list { display: grid; gap: 20px; }
+    .luxe-card { background: var(--luxe-card); border-radius: 24px; position: relative; border: 1px solid rgba(255,255,255,0.03); overflow: hidden; }
+    .luxe-card-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--luxe-gold-soft); opacity: 0.5; }
+    .luxe-card-body { padding: 25px; }
+    .luxe-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .luxe-id { color: #4A5568; font-family: monospace; font-size: 0.85rem; }
+    .luxe-status { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 4px 12px; border-radius: 100px; }
+    .status-completed { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+    .status-pending { background: rgba(255, 215, 0, 0.1); color: var(--luxe-gold); }
+
+    .luxe-card-main { display: flex; gap: 25px; align-items: center; margin-bottom: 25px; }
+    .luxe-time-box { text-align: center; background: #0B0E14; padding: 12px; border-radius: 16px; border: 1px solid var(--luxe-border); }
+    .luxe-time-box .time { display: block; font-size: 1.2rem; font-weight: 800; color: var(--luxe-gold); }
+    .luxe-time-box .date { font-size: 0.7rem; color: #718096; font-weight: 700; text-transform: uppercase; }
+    .luxe-card-info h3 { margin: 0; font-size: 1.3rem; letter-spacing: 0.5px; }
+    .luxe-card-info p { margin: 5px 0 0; color: #718096; }
+
+    .luxe-card-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.03); padding-top: 20px; }
+    .luxe-review-pill { background: rgba(255, 215, 0, 0.03); padding: 8px 16px; border-radius: 100px; border: 1px solid var(--luxe-border); display: flex; align-items: center; gap: 10px; }
+    .luxe-stars i { width: 14px; height: 14px; color: #4A5568; }
+    .luxe-stars i.active { color: var(--luxe-gold); fill: var(--luxe-gold); }
+    .luxe-review-pill button { background: none; border: none; color: var(--luxe-gold); cursor: pointer; padding: 0; }
+    
+    .luxe-review-btn { background: none; border: 1px solid var(--luxe-gold); color: var(--luxe-gold); padding: 8px 20px; border-radius: 100px; font-weight: 700; font-size: 0.8rem; cursor: pointer; transition: 0.3s; }
+    .luxe-review-btn:hover { background: var(--luxe-gold); color: #000; }
+
+    .luxe-card-actions { display: flex; gap: 10px; }
+    .luxe-circle-btn { width: 40px; height: 40px; border-radius: 50%; background: #1A1C23; border: 1px solid rgba(255,255,255,0.05); color: #718096; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
+    .luxe-circle-btn:hover { border-color: var(--luxe-gold); color: var(--luxe-gold); }
+
+    @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
+</style>
+{% endblock %}

@@ -28,13 +28,22 @@ Android emulator uses `http://10.0.2.2:8000/api/v1`. A physical phone needs your
 flutter run --dart-define=API_BASE_URL=http://192.168.1.10:8000/api/v1
 ```
 
-Web / Chrome: `http://127.0.0.1:8000/api/v1`.
+Web / Chrome: `http://127.0.0.1:8001/api/v1`.
+
+## Tests
+
+These stay off the network (no running Django):
+
+```bash
+cd mobile
+flutter test
+```
 
 ## Auth
 
 Phone OTP matches the website. New numbers are signed up automatically. In DEBUG + mock SMS, the OTP is shown on the verify screen.
 
-Local Razorpay mock orders (`order_mock_*`) complete in-app. Live Razorpay checkout needs the official Android/iOS SDK later.
+Local Razorpay mock orders (`order_mock_*`) complete in-app when Django has no keys. Live orders open Razorpay Checkout (web Checkout.js, Android/iOS SDK) and Django verifies the signature. Glance at a test-key payment before production.
 
 ## Customer flows included
 
@@ -42,8 +51,10 @@ Local Razorpay mock orders (`order_mock_*`) complete in-app. Live Razorpay check
 - Categories, pujas, cities, languages, purohit discovery
 - Real availability slots
 - Booking create with city, area, venue, samagri
+- Travel request when the purohit does not already offer that place
 - Wallet / Razorpay / mixed pay
 - Booking detail, cancel, reschedule, chat, review
 - Wallet top-up + passbook
 - Notifications
 - Support tickets (`ServiceRequest`)
+- Purohit workspace: confirm/start/complete bookings, travel-request replies, switch from devotee profile, My pujas, availability calendar

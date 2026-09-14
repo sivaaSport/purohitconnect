@@ -146,6 +146,18 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 if (b.venueLabel.isNotEmpty) Text(b.venueLabel, style: const TextStyle(color: AppTheme.textMuted, fontSize: 13)),
                 const SizedBox(height: 12),
                 Text('₹${b.totalAmount.toInt()}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 22, color: AppTheme.primary)),
+                if (b.startCode.isNotEmpty || b.completeCode.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    b.started ? 'Share the done code with your purohit when the ritual finishes.' : 'Share the start code when the purohit arrives.',
+                    style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, height: 1.35),
+                  ),
+                  const SizedBox(height: 8),
+                  if (!b.started && b.startCode.isNotEmpty)
+                    Text('Start code  ${b.startCode}', style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 18)),
+                  if (b.completeCode.isNotEmpty)
+                    Text('Done code  ${b.completeCode}', style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 18)),
+                ],
               ],
             ),
           ),

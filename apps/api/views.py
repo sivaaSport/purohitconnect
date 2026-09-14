@@ -15,6 +15,7 @@ from apps.accounts.views import validate_phone_number
 from apps.accounts.workspace import ensure_devotee_profile
 from apps.bookings.location import validate_booking_location
 from apps.bookings.models import Booking, TravelRequest
+from apps.bookings.travel import submit_travel_request
 from apps.bookings.payment_utils import (
     get_booking_payment_options,
     process_booking_payment_mixed,
@@ -120,6 +121,13 @@ def send_otp(request):
     if action == 'signup' and user_exists:
         action = 'login'
 
+    wait = OTP.seconds_until_resend(phone, action)
+    if wait > 0:
+        return json_error(
+            f'Wait {wait} seconds before requesting another OTP.',
+            status=429,
+            retry_after=wait,
+        )
     otp_obj = OTP.generate_otp(phone, action)
     success, message, sid = send_otp_sms(phone, otp_obj.otp_code, action)
     if not success:
@@ -180,15 +188,22 @@ def verify_otp(request):
             parts = name.split(None, 1)
             first_name = parts[0]
             last_name = parts[1] if len(parts) > 1 else ''
+        role = (data.get('role') or 'customer').strip().lower()
+        if role not in ('customer', 'purohit'):
+            role = 'customer'
         user = CustomUser.objects.create_user(
             username=username[:150],
             phone=phone,
             first_name=first_name,
             last_name=last_name,
-            role='customer',
+            role=role,
             is_phone_verified=True,
         )
-        CustomerProfile.objects.get_or_create(user=user)
+        if role == 'purohit':
+            from apps.accounts.workspace import enable_purohit_workspace
+            enable_purohit_workspace(user)
+        else:
+            CustomerProfile.objects.get_or_create(user=user)
     else:
         if not user.is_phone_verified:
             user.is_phone_verified = True
@@ -507,7 +522,10 @@ def create_booking(request):
         package, venue_type, city, area, address, on_date=date_obj, devotee=customer
     )
     if not location_ok:
-        return json_error(location_error)
+        extra = {}
+        if location_error and 'request a visit' in location_error:
+            extra['code'] = 'travel_request_required'
+        return json_error(location_error, **extra)
 
     total_amount = Decimal(str(package.price))
     if needs_samagri and package.samagri_price:
@@ -563,7 +581,7 @@ def create_booking(request):
 def my_bookings(request):
     status = (request.GET.get('status') or 'all').strip().lower()
     qs = Booking.objects.filter(customer=request.user).select_related(
-        'purohit', 'puja_package__puja', 'city', 'area'
+        'purohit', 'puja_package__puja', 'city', 'area', 'customer'
     ).order_by('-event_date', '-created_at')
     if status == 'upcoming':
         qs = qs.filter(status__in=['pending', 'confirmed']).exclude(
@@ -586,10 +604,26 @@ def _customer_booking(request, booking_id):
     )
 
 
+def _visible_booking(request, booking_id):
+    booking = get_object_or_404(
+        Booking.objects.select_related(
+            'purohit', 'puja_package__puja', 'city', 'area', 'customer', 'purohit__profile'
+        ),
+        booking_id=booking_id,
+    )
+    if booking.customer_id == request.user.id:
+        return booking
+    listing_id = getattr(getattr(getattr(request.user, 'purohit_profile', None), 'purohit_listing', None), 'id', None)
+    if listing_id and listing_id == booking.purohit_id:
+        return booking
+    from django.http import Http404
+    raise Http404()
+
+
 @api_auth_required
 @require_http_methods(['GET'])
 def booking_detail(request, booking_id):
-    booking = _customer_booking(request, booking_id)
+    booking = _visible_booking(request, booking_id)
     return json_ok({
         'booking': booking_payload(booking, request),
         'payment_options': _money_options(request.user, booking.total_amount),
@@ -770,7 +804,7 @@ def booking_reschedule_handle(request, booking_id):
 @api_auth_required
 @require_http_methods(['GET', 'POST'])
 def booking_chat(request, booking_id):
-    booking = _customer_booking(request, booking_id)
+    booking = _visible_booking(request, booking_id)
     if request.method == 'POST':
         data, err = _json(request)
         if err:
@@ -946,11 +980,54 @@ def mark_all_notifications_read(request):
 
 
 @api_auth_required
-@require_http_methods(['GET'])
+@require_http_methods(['GET', 'POST'])
 def my_travel_requests(request):
+    if request.method == 'POST':
+        data, err = _json(request)
+        if err:
+            return err
+        ensure_devotee_profile(request.user)
+        package_id = data.get('package_id')
+        if not package_id:
+            return json_error('package_id is required')
+        package = PurohitPujaPackage.objects.select_related(
+            'purohit', 'puja', 'purohit__profile'
+        ).filter(id=package_id).first()
+        if not package:
+            return json_error('Package not found', status=404)
+
+        date_str = (data.get('event_date') or data.get('date') or '').strip()
+        try:
+            preferred_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return json_error('Please choose a date for the visit request.')
+
+        city_id = data.get('city_id') or data.get('city')
+        area_id = data.get('area_id') or data.get('area')
+        city = City.objects.filter(id=city_id).first() if city_id else None
+        area = Area.objects.filter(id=area_id).first() if area_id else None
+        _ok, code, message, travel = submit_travel_request(
+            customer=request.user,
+            package=package,
+            city=city,
+            area=area,
+            address=(data.get('address') or '').strip(),
+            venue_type=data.get('venue_type') or 'home',
+            preferred_date=preferred_date,
+            preferred_time=_parse_event_time(data.get('event_time') or data.get('time')),
+            message=(data.get('message') or data.get('special_requests') or '').strip(),
+        )
+        payload = {'code': code, 'message': message}
+        if travel:
+            payload['travel_request'] = travel_request_payload(travel)
+        if code in ('created', 'already_open'):
+            return json_ok(payload)
+        status = 403 if code == 'own_listing' else 400
+        return json_error(message, status=status, code=code)
+
     rows = list(
         TravelRequest.objects.filter(customer=request.user)
-        .select_related('purohit', 'city', 'area', 'puja_package__puja')
+        .select_related('purohit', 'city', 'area', 'puja_package__puja', 'customer')
         .exclude(status='booked')[:20]
     )
     pending = sum(1 for item in rows if item.status == 'pending')

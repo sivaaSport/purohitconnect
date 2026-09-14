@@ -119,6 +119,7 @@ class ApiService {
       throw ApiException(
         (data['error'] ?? data['message'] ?? 'Request failed (${res.statusCode})').toString(),
         statusCode: res.statusCode,
+        code: data['code']?.toString(),
       );
     }
     return data;
@@ -128,12 +129,13 @@ class ApiService {
     return _send('POST', ApiConstants.sendOtp, {'phone': phone, 'action': action});
   }
 
-  Future<Map<String, dynamic>> verifyOtp(String phone, String otpCode, {String action = 'auto', String? name}) async {
+  Future<Map<String, dynamic>> verifyOtp(String phone, String otpCode, {String action = 'auto', String? name, String? role}) async {
     final data = await _send('POST', ApiConstants.verifyOtp, {
       'phone': phone,
       'otp_code': otpCode,
       'action': action,
       if (name != null && name.isNotEmpty) 'name': name,
+      if (role != null && role.isNotEmpty) 'role': role,
     });
     final token = data['token']?.toString();
     if (token != null && data['user'] != null) {
@@ -342,6 +344,28 @@ class ApiService {
         .toList();
   }
 
+  Future<Map<String, dynamic>> createTravelRequest({
+    required int packageId,
+    required String eventDate,
+    required String eventTime,
+    required String address,
+    required int cityId,
+    required int areaId,
+    String venueType = 'home',
+    String message = '',
+  }) {
+    return _send('POST', ApiConstants.travelRequests, {
+      'package_id': packageId,
+      'event_date': eventDate,
+      'event_time': eventTime,
+      'address': address,
+      'city_id': cityId,
+      'area_id': areaId,
+      'venue_type': venueType,
+      'message': message,
+    });
+  }
+
   Future<Map<String, dynamic>> fetchNotifications() => _get(ApiConstants.notifications);
 
   Future<void> markNotificationRead(int id) => _send('POST', '/notifications/$id/read/');
@@ -362,5 +386,76 @@ class ApiService {
       'category': category,
     });
     return SupportTicket.fromJson(Map<String, dynamic>.from(data['ticket'] as Map));
+  }
+
+  Future<Map<String, dynamic>> enablePurohitWorkspace() {
+    return _send('POST', ApiConstants.purohitEnable);
+  }
+
+  Future<Map<String, dynamic>> fetchPurohitDashboard() => _get(ApiConstants.purohitDashboard);
+
+  Future<List<BookingModel>> fetchPurohitBookings({String bucket = 'all'}) async {
+    final data = await _get(ApiConstants.purohitBookings, {'bucket': bucket});
+    return (data['bookings'] as List? ?? [])
+        .map((item) => BookingModel.fromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> updatePurohitBookingStatus(
+    String bookingId, {
+    required String status,
+    String code = '',
+  }) {
+    return _send('POST', '/workspace/purohit/bookings/$bookingId/status/', {
+      'status': status,
+      if (code.isNotEmpty) 'verification_code': code,
+    });
+  }
+
+  Future<List<TravelRequestModel>> fetchPurohitTravelRequests() async {
+    final data = await _get(ApiConstants.purohitTravel);
+    return (data['travel_requests'] as List? ?? [])
+        .map((item) => TravelRequestModel.fromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> respondPurohitTravel(
+    int requestId, {
+    required String decision,
+    double travelFee = 0,
+    String response = '',
+  }) {
+    return _send('POST', '/workspace/purohit/travel-requests/$requestId/respond/', {
+      'decision': decision,
+      'travel_fee': travelFee,
+      'purohit_response': response,
+    });
+  }
+
+  Future<Map<String, dynamic>> fetchPurohitPackages() => _get(ApiConstants.purohitPackages);
+
+  Future<Map<String, dynamic>> savePurohitPackage(Map<String, dynamic> body) {
+    return _send('POST', ApiConstants.purohitPackages, body);
+  }
+
+  Future<PurohitCalendarState> fetchPurohitCalendar({
+    required int year,
+    required int month,
+    String day = '',
+    int? previewPackageId,
+  }) async {
+    final query = <String, String>{
+      'year': '$year',
+      'month': '$month',
+      if (day.isNotEmpty) 'day': day,
+      if (previewPackageId != null) 'preview_package': '$previewPackageId',
+    };
+    final data = await _get(ApiConstants.purohitCalendar, query);
+    return PurohitCalendarState.fromJson(data);
+  }
+
+  Future<PurohitCalendarState> updatePurohitCalendar(Map<String, dynamic> body) async {
+    final data = await _send('POST', ApiConstants.purohitCalendar, body);
+    return PurohitCalendarState.fromJson(data);
   }
 }

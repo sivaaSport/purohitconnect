@@ -1,0 +1,24 @@
+---
+description: Django website and /api/v1 conventions for PurohitConnect
+globs: apps/**/*.py,config/**/*.py,templates/**/*.html
+alwaysApply: false
+---
+
+# PurohitConnect Django
+
+Mobile features go through `apps/api/` (`/api/v1/`). Keep payloads in `apps/api/serializers.py`. Reuse existing models; do not add a mobile-only database.
+
+```python
+# BAD — Flutter-only model or a second bookings table
+class MobileBooking(models.Model): ...
+
+# GOOD — serialize the existing Booking / Purohit
+def purohit_payload(purohit, request=None, include_packages=False):
+    ...
+```
+
+- CORS middleware (`apps.api.middleware.MobileApiCorsMiddleware`) stays first in `MIDDLEWARE` and must cover `/media/`.
+- Detail endpoints may include gallery; list payloads stay lean.
+- Local `ALLOWED_HOSTS` may be `*` so a phone on LAN can hit `:8001`.
+- After API changes: `python manage.py test apps.api`.
+- Match website copy and order (`apps/pujas/catalog.py` `CATEGORY_ORDER` / `PUJA_ORDER`) when the ticket is “like the website.”

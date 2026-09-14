@@ -47,6 +47,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Future<void> _pay() async {
     setState(() => _loading = true);
     try {
+      final user = context.read<AuthProvider>().user;
       final res = await ApiService().payBooking(_booking.bookingId, _method);
       if (res['paid'] == true || res['already_paid'] == true) {
         _goSuccess(BookingModel.fromJson(Map<String, dynamic>.from(res['booking'] as Map)));
@@ -55,11 +56,20 @@ class _PaymentScreenState extends State<PaymentScreen> {
       final raw = res['razorpay'];
       if (raw is Map) {
         final order = RazorpayOrder.fromJson(Map<String, dynamic>.from(raw));
-        final verified = await PaymentHelper.settleBooking(bookingId: _booking.bookingId, order: order);
+        final verified = await PaymentHelper.settleBooking(
+          bookingId: _booking.bookingId,
+          order: order,
+          name: user?.name ?? '',
+          email: user?.email ?? '',
+          contact: user?.phone ?? '',
+          description: 'Booking Payment - ${_booking.bookingId}',
+        );
         _goSuccess(BookingModel.fromJson(Map<String, dynamic>.from(verified['booking'] as Map)));
         return;
       }
       throw Exception(res['error'] ?? 'Payment could not start');
+    } on PaymentCancelledException {
+      if (mounted) showAppSnack(context, 'Payment cancelled');
     } catch (e) {
       if (mounted) showAppSnack(context, e.toString(), error: true);
     } finally {
@@ -100,7 +110,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           const SizedBox(height: 18),
           _methodTile('wallet', 'Pay from wallet', 'Balance ₹${_options.walletBalance.toInt()}', enabled: _options.walletAvailable),
           _methodTile('mixed', 'Wallet + Razorpay', _options.mixedAvailable ? '₹${_options.mixedWallet.toInt()} wallet + ₹${_options.mixedRazorpay.toInt()} card' : 'Not needed', enabled: _options.mixedAvailable),
-          _methodTile('razorpay', 'Razorpay / UPI / card', 'Secure checkout (mock in local dev)', enabled: true),
+          _methodTile('razorpay', 'Razorpay / UPI / card', 'Secure checkout. Local mock if Django has no Razorpay keys.', enabled: true),
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: _loading ? null : _pay,

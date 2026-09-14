@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 from datetime import timedelta
+import hmac
 import random
 import string
 from apps.core.models import City, Language
@@ -102,52 +103,66 @@ class OTP(models.Model):
         self.attempts += 1
         self.save()
     
+    RESEND_COOLDOWN_SECONDS = 45
+
+    @classmethod
+    def seconds_until_resend(cls, phone, otp_type='login'):
+        latest = (
+            cls.objects.filter(phone=phone, otp_type=otp_type, is_used=False)
+            .order_by('-created_at')
+            .first()
+        )
+        if latest is None:
+            return 0
+        elapsed = (timezone.now() - latest.created_at).total_seconds()
+        wait = cls.RESEND_COOLDOWN_SECONDS - elapsed
+        return int(wait) if wait > 0 else 0
+
     @classmethod
     def generate_otp(cls, phone, otp_type='login'):
-        # Clean up expired OTPs for this phone
-        cls.objects.filter(
-            phone=phone,
-            expires_at__lt=timezone.now()
-        ).delete()
-        
-        # Generate 6-digit OTP
+        cls.objects.filter(phone=phone, expires_at__lt=timezone.now()).delete()
+        cls.objects.filter(phone=phone, otp_type=otp_type, is_used=False).update(is_used=True)
+
         otp_code = ''.join(random.choices(string.digits, k=6))
-        
-        # Set expiration to 5 minutes from now
         expires_at = timezone.now() + timedelta(minutes=5)
-        
         return cls.objects.create(
             phone=phone,
             otp_code=otp_code,
             otp_type=otp_type,
-            expires_at=expires_at
+            expires_at=expires_at,
         )
-    
+
     @classmethod
     def verify_otp(cls, phone, otp_code, otp_type='login'):
-        try:
-            otp = cls.objects.filter(
-                phone=phone,
-                otp_code=otp_code,
-                otp_type=otp_type,
-                is_used=False
-            ).latest('created_at')
-            
-            if otp.is_valid():
-                otp.is_used = True
-                otp.save()
-                return True, "OTP verified successfully"
-            elif otp.attempts >= otp.max_attempts:
-                return False, "Maximum attempts exceeded"
-            elif otp.is_expired():
-                return False, "OTP has expired"
-            else:
-                otp.increment_attempts()
-                remaining = otp.max_attempts - otp.attempts
-                return False, f"Invalid OTP. {remaining} attempts remaining"
-                
-        except cls.DoesNotExist:
+        otp = (
+            cls.objects.filter(phone=phone, otp_type=otp_type, is_used=False)
+            .order_by('-created_at')
+            .first()
+        )
+        if otp is None:
             return False, "Invalid OTP"
+        if otp.is_expired():
+            return False, "OTP has expired"
+        if otp.attempts >= otp.max_attempts:
+            return False, "Maximum attempts exceeded"
+
+        entered = (otp_code or '').strip()
+        expected = (otp.otp_code or '').strip()
+        code_ok = (
+            len(entered) == len(expected) == 6
+            and hmac.compare_digest(entered, expected)
+        )
+        if not code_ok:
+            otp.increment_attempts()
+            otp.refresh_from_db(fields=['attempts'])
+            if otp.attempts >= otp.max_attempts:
+                return False, "Maximum attempts exceeded"
+            remaining = otp.max_attempts - otp.attempts
+            return False, f"Invalid OTP. {remaining} attempts remaining"
+
+        otp.is_used = True
+        otp.save(update_fields=['is_used'])
+        return True, "OTP verified successfully"
 
 class PurohitProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='purohit_profile')

@@ -555,97 +555,21 @@ def purohit_dashboard(request):
 def update_booking_status(request, booking_id):
     """View to update booking status from dashboard."""
     if request.method == 'POST':
-        booking = get_object_or_404(Booking, booking_id=booking_id)
-        new_status = request.POST.get('status')
-        entered_code = request.POST.get('verification_code')
-        
-        from apps.bookings.utils import record_booking_history
-        
-        # Validation Logic for Codes
-        if new_status == 'confirmed' and not booking.accepted_at and booking.status not in ('cancelled', 'completed'):
-            if booking.payment_status != 'success':
-                messages.error(request, "Cannot confirm — customer payment is still pending.")
-                return redirect('dashboard:purohit')
-
-            # Initial acceptance doesn't need code, but 'Starting' the puja does
-            from django.utils import timezone
-            booking.accepted_at = timezone.now()
-            booking.status = 'confirmed'
-            booking.save(update_fields=['status', 'accepted_at', 'updated_at'])
-            
-            record_booking_history(
-                booking=booking,
-                event='status_change',
-                user=request.user,
-                message=f"Booking confirmed by purohit {request.user.username}",
-                old_value='pending',
-                new_value='confirmed'
-            )
-            messages.success(request, "Booking confirmed successfully!")
-            
-        elif new_status == 'confirmed' and booking.accepted_at:
-            # This is 'Start Puja' action
-            if entered_code != booking.start_code:
-                messages.error(request, "Invalid Start Code! Please ask the devotee for the correct code.")
-                return redirect('dashboard:purohit')
-            
-            from django.utils import timezone
-            booking.started_at = timezone.now()
-            booking.save(update_fields=['started_at', 'updated_at'])
-            
-            record_booking_history(
-                booking=booking,
-                event='ritual_started',
-                user=request.user,
-                message=f"Ritual started by purohit {request.user.username} (Start Code: {entered_code})",
-                old_value='confirmed',
-                new_value='started'
-            )
-            from apps.core.notification_service import create_and_send_notification
-            puja_name = booking.puja_package.puja.name if booking.puja_package_id else 'your ritual'
-            create_and_send_notification(
-                booking.customer,
-                title='Ritual started',
-                message=f'{booking.purohit.name} has started {puja_name}. Share the done code when it finishes.',
-                link='/dashboard/customer/',
-            )
-            messages.success(request, "Start Code Verified! Ritual has officially begun.")
-            
-        elif new_status == 'completed':
-            if entered_code != booking.complete_code:
-                messages.error(request, "Invalid Completion Code! Please ask the devotee for the final code.")
-                return redirect('dashboard:purohit')
-            
-            from django.utils import timezone
-            booking.completed_at = timezone.now()
-            booking.status = 'completed'
-            booking.save(update_fields=['status', 'completed_at', 'updated_at'])
-            
-            record_booking_history(
-                booking=booking,
-                event='ritual_completed',
-                user=request.user,
-                message=f"Ritual completed by purohit {request.user.username} (Complete Code: {entered_code})",
-                old_value='started',
-                new_value='completed'
-            )
-            from apps.core.notification_service import create_and_send_notification
-            puja_name = booking.puja_package.puja.name if booking.puja_package_id else 'your ritual'
-            create_and_send_notification(
-                booking.customer,
-                title='Please review your ritual',
-                message=(
-                    f'{booking.purohit.name} has completed {puja_name}. '
-                    'Please share a short review of your experience.'
-                ),
-                link='/dashboard/customer/#my-bookings',
-            )
-            messages.success(request, "Completion Code Verified! Ritual marked as performed.")
-
+        booking = get_object_or_404(
+            Booking.objects.select_related('purohit', 'puja_package__puja', 'customer'),
+            booking_id=booking_id,
+        )
+        from apps.bookings.purohit_actions import apply_purohit_booking_status
+        ok, _code, message = apply_purohit_booking_status(
+            booking=booking,
+            actor=request.user,
+            status=request.POST.get('status'),
+            verification_code=request.POST.get('verification_code'),
+        )
+        if ok:
+            messages.success(request, message)
         else:
-            messages.error(request, "Invalid status transition.")
-            return redirect('dashboard:purohit')
-            
+            messages.error(request, message)
     return redirect('dashboard:purohit')
 
 def request_reschedule(request, booking_id):
@@ -812,8 +736,7 @@ def manage_package(request):
         return redirect('dashboard:customer')
     set_active_workspace(request, 'purohit')
 
-    from decimal import Decimal, InvalidOperation
-    from apps.pujas.models import Puja, PurohitPujaPackage
+    from apps.pujas.package_actions import apply_package_action
     from apps.purohits.services import ensure_purohit_listing
 
     purohit = ensure_purohit_listing(request.user)
@@ -821,143 +744,15 @@ def manage_package(request):
         messages.error(request, "Purohit workspace is not ready yet.")
         return redirect('dashboard:purohit')
 
-    action = (request.POST.get('action') or '').strip()
-
-    if action == 'add':
-        puja_id = request.POST.get('puja_id')
-        price_raw = (request.POST.get('price') or '').strip()
-        duration_raw = (request.POST.get('duration_hours') or '').strip()
-        buffer_raw = (request.POST.get('buffer_minutes') or '30').strip()
-        includes_samagri = request.POST.get('includes_samagri') == 'on'
-        samagri_raw = (request.POST.get('samagri_price') or '').strip()
-        custom_description = (request.POST.get('custom_description') or '').strip()
-        from apps.pujas.venues import encode_venues
-        venues = encode_venues(request.POST.getlist('venues'))
-        venue_notes = (request.POST.get('venue_notes') or '').strip()[:240]
-
-        puja = get_object_or_404(Puja, id=puja_id)
-        if not venues:
-            venues = encode_venues(puja.get_typical_venues())
-        try:
-            price = Decimal(price_raw)
-            if price <= 0:
-                raise InvalidOperation
-        except (InvalidOperation, TypeError):
-            messages.error(request, "Enter a valid price greater than zero.")
-            return redirect('dashboard:purohit')
-
-        try:
-            duration_hours = Decimal(duration_raw or puja.base_duration_hours)
-            if duration_hours <= 0 or duration_hours > 24:
-                raise InvalidOperation
-        except (InvalidOperation, TypeError):
-            messages.error(request, "Enter a valid ritual duration (hours).")
-            return redirect(reverse('dashboard:purohit') + '#my-pujas')
-
-        try:
-            buffer_minutes = int(buffer_raw)
-            if buffer_minutes < 0 or buffer_minutes > 180:
-                raise ValueError
-        except (TypeError, ValueError):
-            messages.error(request, "Buffer must be between 0 and 180 minutes.")
-            return redirect(reverse('dashboard:purohit') + '#my-pujas')
-
-        samagri_price = None
-        if includes_samagri and samagri_raw:
-            try:
-                samagri_price = Decimal(samagri_raw)
-            except (InvalidOperation, TypeError):
-                messages.error(request, "Enter a valid samagri price.")
-                return redirect('dashboard:purohit')
-
-        package, created = PurohitPujaPackage.objects.get_or_create(
-            purohit=purohit,
-            puja=puja,
-            defaults={
-                'price': price,
-                'duration_hours': duration_hours,
-                'buffer_minutes': buffer_minutes,
-                'includes_samagri': includes_samagri,
-                'samagri_price': samagri_price,
-                'custom_description': custom_description,
-                'venues': venues,
-                'venue_notes': venue_notes,
-            },
-        )
-        if not created:
-            messages.error(request, f"You already offer {puja.name}.")
-        else:
-            messages.success(
-                request,
-                f"Added {puja.name} ({duration_hours}h + {buffer_minutes}m buffer) to your offerings.",
-            )
-
-    elif action == 'update':
-        package = get_object_or_404(
-            PurohitPujaPackage, id=request.POST.get('package_id'), purohit=purohit
-        )
-        price_raw = (request.POST.get('price') or '').strip()
-        duration_raw = (request.POST.get('duration_hours') or '').strip()
-        buffer_raw = (request.POST.get('buffer_minutes') or '30').strip()
-        includes_samagri = request.POST.get('includes_samagri') == 'on'
-        samagri_raw = (request.POST.get('samagri_price') or '').strip()
-        custom_description = (request.POST.get('custom_description') or '').strip()
-        from apps.pujas.venues import encode_venues
-        venues = encode_venues(request.POST.getlist('venues')) or encode_venues(package.get_venues())
-        venue_notes = (request.POST.get('venue_notes') or '').strip()[:240]
-        try:
-            price = Decimal(price_raw)
-            if price <= 0:
-                raise InvalidOperation
-        except (InvalidOperation, TypeError):
-            messages.error(request, "Enter a valid price greater than zero.")
-            return redirect('dashboard:purohit')
-
-        try:
-            duration_hours = Decimal(duration_raw or package.get_duration_hours())
-            if duration_hours <= 0 or duration_hours > 24:
-                raise InvalidOperation
-        except (InvalidOperation, TypeError):
-            messages.error(request, "Enter a valid ritual duration (hours).")
-            return redirect(reverse('dashboard:purohit') + '#my-pujas')
-
-        try:
-            buffer_minutes = int(buffer_raw)
-            if buffer_minutes < 0 or buffer_minutes > 180:
-                raise ValueError
-        except (TypeError, ValueError):
-            messages.error(request, "Buffer must be between 0 and 180 minutes.")
-            return redirect(reverse('dashboard:purohit') + '#my-pujas')
-
-        samagri_price = None
-        if includes_samagri and samagri_raw:
-            try:
-                samagri_price = Decimal(samagri_raw)
-            except (InvalidOperation, TypeError):
-                messages.error(request, "Enter a valid samagri price.")
-                return redirect('dashboard:purohit')
-
-        package.price = price
-        package.duration_hours = duration_hours
-        package.buffer_minutes = buffer_minutes
-        package.includes_samagri = includes_samagri
-        package.samagri_price = samagri_price
-        package.custom_description = custom_description
-        package.venues = venues
-        package.venue_notes = venue_notes
-        package.save()
-        messages.success(request, f"Updated {package.puja.name} ({duration_hours}h ritual).")
-
-    elif action == 'delete':
-        package = get_object_or_404(
-            PurohitPujaPackage, id=request.POST.get('package_id'), purohit=purohit
-        )
-        name = package.puja.name
-        package.delete()
-        messages.success(request, f"Removed {name} from your offerings.")
+    ok, _code, message, _package = apply_package_action(
+        purohit=purohit,
+        action=request.POST.get('action'),
+        data=request.POST,
+    )
+    if ok:
+        messages.success(request, message)
     else:
-        messages.error(request, "Unknown package action.")
-
+        messages.error(request, message)
     return redirect(reverse('dashboard:purohit') + '#my-pujas')
 
 
@@ -1169,67 +964,27 @@ def respond_travel_request(request, request_pk):
     if request.method != 'POST':
         return redirect(reverse('dashboard:purohit') + '#travel-requests')
 
-    from datetime import timedelta
-    from decimal import Decimal, InvalidOperation
-    from django.utils import timezone
     from apps.bookings.models import TravelRequest
-    from apps.core.models import Notification
+    from apps.bookings.travel import respond_travel_request as decide_travel_request
 
     purohit, error_response = _purohit_workspace(request)
     if error_response:
         return error_response
 
     travel_request = get_object_or_404(TravelRequest, pk=request_pk, purohit=purohit)
-    if travel_request.status != 'pending':
-        messages.info(request, "That travel request has already been answered.")
-        return redirect(reverse('dashboard:purohit') + '#travel-requests')
-
-    decision = (request.POST.get('decision') or '').strip().lower()
-    travel_request.purohit_response = (request.POST.get('purohit_response') or '').strip()[:240]
-    if decision == 'accept':
-        raw_fee = (request.POST.get('travel_fee') or '0').strip() or '0'
-        try:
-            fee = Decimal(raw_fee)
-        except InvalidOperation:
-            messages.error(request, "Enter a valid travel fee, or leave it at 0.")
-            return redirect(reverse('dashboard:purohit') + '#travel-requests')
-        if fee < 0:
-            messages.error(request, "Travel fee cannot be negative.")
-            return redirect(reverse('dashboard:purohit') + '#travel-requests')
-        travel_request.status = 'accepted'
-        travel_request.travel_fee = fee
-        travel_request.expires_at = timezone.now() + timedelta(hours=48)
-        travel_request.save()
-        book_link = '/dashboard/customer/'
-        if travel_request.puja_package_id:
-            book_link = f'/bookings/package/{travel_request.puja_package_id}/?request={travel_request.request_id}'
-        Notification.objects.create(
-            user=travel_request.customer,
-            title='Travel request accepted',
-            message=(
-                f"{purohit.name} can come to {travel_request.area.name} on "
-                f"{travel_request.preferred_date:%d %b}."
-                + (f" Travel fee: ₹{fee}." if fee else "")
-                + " Book within 48 hours to lock it in."
-            ),
-            link=book_link,
-        )
-        messages.success(request, f"Accepted {travel_request.request_id}. The devotee can book now.")
-    elif decision == 'decline':
-        travel_request.status = 'declined'
-        travel_request.save()
-        Notification.objects.create(
-            user=travel_request.customer,
-            title='Travel request declined',
-            message=(
-                f"{purohit.name} cannot take the visit to {travel_request.area.name} "
-                f"on {travel_request.preferred_date:%d %b}."
-            ),
-            link='/dashboard/customer/',
-        )
-        messages.success(request, f"Declined {travel_request.request_id}.")
+    ok, code, message = decide_travel_request(
+        purohit=purohit,
+        travel_request=travel_request,
+        decision=request.POST.get('decision'),
+        travel_fee=request.POST.get('travel_fee') or 0,
+        purohit_response=request.POST.get('purohit_response'),
+    )
+    if ok:
+        messages.success(request, message)
+    elif code == 'already_answered':
+        messages.info(request, message)
     else:
-        messages.error(request, "Choose accept or decline.")
+        messages.error(request, message)
     return redirect(reverse('dashboard:purohit') + '#travel-requests')
 
 
@@ -1239,10 +994,8 @@ def toggle_availability(request):
     if request.method != 'POST':
         return redirect(reverse('dashboard:purohit') + '#calendar')
 
-    from datetime import datetime
-    from apps.purohits.models import PurohitAvailability
+    from apps.purohits.availability_actions import apply_availability_action
     from apps.purohits.services import ensure_purohit_listing
-    from apps.purohits.utils import add_block, clear_day_blocks, apply_preset
 
     from apps.accounts.workspace import can_act_as_purohit, set_active_workspace
     if not can_act_as_purohit(request.user):
@@ -1255,69 +1008,18 @@ def toggle_availability(request):
         messages.error(request, "Purohit workspace is not ready yet.")
         return redirect('dashboard:purohit')
 
-    action = (request.POST.get('action') or 'block_day').strip()
     date_str = request.POST.get('date')
-    reason = (request.POST.get('reason') or '').strip()
-    redirect_day = date_str or ''
     preview_package = (request.POST.get('preview_package') or '').strip()
-
-    try:
-        if action == 'set_work_hours':
-            from apps.purohits.utils import _parse_time
-            start = _parse_time(request.POST.get('work_start'))
-            end = _parse_time(request.POST.get('work_end'))
-            if not start or not end:
-                raise ValueError("Provide both start and end working hours.")
-            if end <= start:
-                raise ValueError("Working day end must be after start.")
-            # Need enough room for at least a 1h ritual
-            start_mins = start.hour * 60 + start.minute
-            end_mins = end.hour * 60 + end.minute
-            if end_mins - start_mins < 60:
-                raise ValueError("Working window must be at least 1 hour.")
-            purohit.work_start = start
-            purohit.work_end = end
-            purohit.save(update_fields=['work_start', 'work_end', 'updated_at'])
-            messages.success(
-                request,
-                f"Working hours updated to {start.strftime('%H:%M')}–{end.strftime('%H:%M')}. "
-                "Devotee slots now use this day window.",
-            )
-        elif action == 'delete_block':
-            block = get_object_or_404(
-                PurohitAvailability, id=request.POST.get('block_id'), purohit=purohit
-            )
-            redirect_day = block.date.isoformat()
-            block.delete()
-            messages.success(request, "Blocked window removed.")
-        elif action == 'clear_day':
-            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-            cleared = clear_day_blocks(purohit, date_obj)
-            messages.success(request, f"Cleared {cleared} block(s) on {date_str}.")
-        elif action == 'preset':
-            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-            apply_preset(purohit, date_obj, request.POST.get('preset') or 'fullday')
-            messages.success(request, f"Applied availability preset on {date_str}.")
-        elif action == 'add_range':
-            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-            add_block(
-                purohit,
-                date_obj,
-                request.POST.get('start_time'),
-                request.POST.get('end_time'),
-                reason or 'Blocked',
-            )
-            messages.success(request, f"Blocked {request.POST.get('start_time')}–{request.POST.get('end_time')} on {date_str}.")
-        elif action == 'block_day':
-            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-            add_block(purohit, date_obj, None, None, reason or 'Unavailable')
-            messages.success(request, f"{date_str} marked unavailable all day.")
-        else:
-            messages.error(request, "Unknown availability action.")
-    except ValueError as exc:
-        messages.error(request, str(exc))
-    except Exception:
-        messages.error(request, "Could not update availability. Check the date and times.")
+    ok, _code, message, extra = apply_availability_action(
+        purohit=purohit,
+        action=request.POST.get('action') or 'block_day',
+        data=request.POST,
+    )
+    if ok:
+        messages.success(request, message)
+    else:
+        messages.error(request, message)
+    redirect_day = (extra or {}).get('redirect_day') or date_str or ''
 
     params = []
     if redirect_day:

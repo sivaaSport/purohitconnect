@@ -30,12 +30,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    if (_role == 'purohit') {
-      showAppSnack(context, 'Purohit workspace is on the website. Create a devotee account here to book rituals.');
-    }
     final phone = '+91${_phoneController.text.trim()}';
     final auth = context.read<AuthProvider>();
-    final sent = await auth.sendOtp(phone, action: 'signup');
+    final sent = await auth.sendOtp(phone, action: 'signup', role: _role);
     if (!mounted) return;
     if (sent) {
       Navigator.push(

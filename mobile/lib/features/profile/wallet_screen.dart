@@ -56,17 +56,26 @@ class _WalletScreenState extends State<WalletScreen> {
 
   Future<void> _topUp(double amount) async {
     try {
+      final user = context.read<AuthProvider>().user;
       final res = await _api.walletTopup(amount);
       final raw = res['razorpay'];
       if (raw is Map) {
         final order = RazorpayOrder.fromJson(Map<String, dynamic>.from(raw));
-        await PaymentHelper.settleWallet(order: order, amount: amount);
+        await PaymentHelper.settleWallet(
+          order: order,
+          amount: amount,
+          name: user?.name ?? '',
+          email: user?.email ?? '',
+          contact: user?.phone ?? '',
+        );
       }
       await _load();
       if (!mounted) return;
       await context.read<AuthProvider>().refreshUser();
       if (!mounted) return;
       showAppSnack(context, '₹${amount.toInt()} added to wallet');
+    } on PaymentCancelledException {
+      if (mounted) showAppSnack(context, 'Payment cancelled');
     } catch (e) {
       if (mounted) showAppSnack(context, e.toString(), error: true);
     }

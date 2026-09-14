@@ -167,12 +167,21 @@ class PaymentProcessor:
     def verify_webhook_signature(payload, razorpay_signature):
         """
         Verify Razorpay webhook payload signature.
-        Prefer dedicated webhook secret; fall back to key secret.
+        Uses RAZORPAY_WEBHOOK_SECRET. Falls back to the API key secret only when mock checkout is allowed.
         """
         if not razorpay_signature:
             return False
 
-        secret_value = getattr(settings, 'RAZORPAY_WEBHOOK_SECRET', None) or settings.RAZORPAY_KEY_SECRET
+        secret_value = (getattr(settings, 'RAZORPAY_WEBHOOK_SECRET', None) or '').strip()
+        if not secret_value:
+            # Local tests historically signed with the API key secret.
+            if getattr(settings, 'DEBUG', False) or allow_razorpay_mock():
+                secret_value = (getattr(settings, 'RAZORPAY_KEY_SECRET', None) or '').strip()
+            else:
+                logger.error('RAZORPAY_WEBHOOK_SECRET is not set; refusing webhook.')
+                return False
+        if not secret_value:
+            return False
         secret = secret_value.encode('utf-8')
         generated_signature = hmac.new(secret, payload, hashlib.sha256).hexdigest()
         return hmac.compare_digest(generated_signature, razorpay_signature)

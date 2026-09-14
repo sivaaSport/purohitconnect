@@ -1,0 +1,25 @@
+---
+description: Flutter devotee app UI and API conventions
+globs: mobile/**/*.dart
+alwaysApply: false
+---
+
+# PurohitConnect Flutter
+
+Match website flows before new UX. Selected chips use `AppTheme.sacredGold` (`#F59E0B`), not midnight or orange `primary`.
+
+```dart
+// BAD
+selectedColor: AppTheme.templeMidnight;
+child: Text('PC'); // hardcoded mark for every purohit
+
+// GOOD
+AppSelectChip(label: city, selected: selected, onTap: ...);
+DevoteeAvatar(name: p.name, imageUrl: p.avatarUrl); // photo or initial
+```
+
+- Back chevron: `AppBackButton` (rust). Hide on tab roots via `AppBackButton.maybe(context)`.
+- Support bot (`SupportBotOverlay`) hides while a modal/sheet is open; filter sheets must scroll (`isScrollControlled` + `Expanded`).
+- No runtime `google_fonts` on web. Use bundled `AppSans`.
+- API via `ApiConstants` (8001 first). Resolve media with `ApiConstants.resolveMediaUrl`.
+- After UI changes, restart Chrome on port 5173 so OneDrive builds pick up new files.

@@ -69,6 +69,12 @@ def send_otp_view(request):
         
         # Generate and send OTP
         otp_type = 'signup' if action == 'signup' else 'login'
+        wait = OTP.seconds_until_resend(phone, otp_type)
+        if wait > 0:
+            messages.error(request, f'Wait {wait} seconds before requesting another OTP.')
+            return redirect('accounts:otp_verification' if request.session.get('otp_phone') else (
+                'accounts:signup' if action == 'signup' else 'accounts:login'
+            ))
         otp_obj = OTP.generate_otp(phone, otp_type)
         
         success, message, sid = send_otp_sms(phone, otp_obj.otp_code, otp_type)
@@ -267,15 +273,15 @@ def otp_verification_view(request):
 
     mock_otp = None
     from apps.accounts.utils import sms_service
-    if getattr(settings, 'DEBUG', False) or getattr(settings, 'TWILIO_ALLOW_MOCK', False):
-        if not sms_service.is_configured():
-            latest = OTP.objects.filter(
-                phone=phone,
-                otp_type='signup' if action == 'signup' else 'login',
-                is_used=False,
-            ).order_by('-created_at').first()
-            if latest and latest.is_valid():
-                mock_otp = latest.otp_code
+    # Never leak the code when DEBUG is off. Locally show it only if Twilio SMS is not live.
+    if getattr(settings, 'DEBUG', False) and not sms_service.is_configured():
+        latest = OTP.objects.filter(
+            phone=phone,
+            otp_type='signup' if action == 'signup' else 'login',
+            is_used=False,
+        ).order_by('-created_at').first()
+        if latest and latest.is_valid():
+            mock_otp = latest.otp_code
     
     context = {
         'phone': phone,

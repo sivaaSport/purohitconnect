@@ -195,86 +195,44 @@ def book_package(request, package_id):
 def request_travel(request, package_id):
     """Devotee asks a purohit to visit a place they do not already offer."""
     from datetime import datetime
-    from apps.bookings.location import covers, resolve_venue
-    from apps.bookings.models import TravelRequest
-    from apps.core.models import Notification
+    from apps.bookings.travel import submit_travel_request
     from apps.purohits.utils import _parse_time
 
     package = get_object_or_404(
-        PurohitPujaPackage.objects.select_related('purohit', 'puja'), id=package_id
+        PurohitPujaPackage.objects.select_related('purohit', 'puja', 'purohit__profile'),
+        id=package_id,
     )
-    purohit = package.purohit
-    listing_user_id = getattr(getattr(purohit, 'profile', None), 'user_id', None)
-    if listing_user_id and listing_user_id == request.user.id:
-        messages.error(request, "You cannot request a visit from your own listing.")
-        return redirect('dashboard:purohit')
-    if not getattr(purohit, 'accepts_travel_requests', True):
-        messages.error(request, "This purohit is not accepting travel requests.")
-        return redirect('bookings:book', package_id=package.id)
-
-    city = City.objects.filter(id=request.POST.get('city')).first()
-    area = Area.objects.filter(id=request.POST.get('area')).first()
-    address = (request.POST.get('address') or '').strip()
-    venue_type = resolve_venue(package, request.POST.get('venue_type'))
     try:
         preferred_date = datetime.strptime(request.POST.get('date') or '', '%Y-%m-%d').date()
     except ValueError:
         messages.error(request, "Please choose a date for the visit request.")
         return redirect('bookings:book', package_id=package.id)
-    preferred_time = _parse_time(request.POST.get('time'))
-    message = (request.POST.get('message') or request.POST.get('special_requests') or '').strip()
 
-    if not city or not area or area.city_id != city.id:
-        messages.error(request, "Please choose a city and area.")
-        return redirect('bookings:book', package_id=package.id)
-    if not address:
-        messages.error(request, "Please enter the place details.")
-        return redirect('bookings:book', package_id=package.id)
-    if venue_type == 'purohit':
-        messages.error(request, "A travel request is only needed when the ritual is not at the purohit's place.")
-        return redirect('bookings:book', package_id=package.id)
-    if covers(purohit, city, area, preferred_date, devotee=request.user):
-        messages.info(request, "This purohit already offers that place on that date. You can book directly.")
-        return redirect('bookings:book', package_id=package.id)
-
-    existing = TravelRequest.objects.filter(
+    _ok, code, message, _travel = submit_travel_request(
         customer=request.user,
-        purohit=purohit,
-        city=city,
-        area=area,
+        package=package,
+        city=City.objects.filter(id=request.POST.get('city')).first(),
+        area=Area.objects.filter(id=request.POST.get('area')).first(),
+        address=(request.POST.get('address') or '').strip(),
+        venue_type=request.POST.get('venue_type'),
         preferred_date=preferred_date,
-        status='pending',
-    ).first()
-    if existing:
-        messages.info(request, f"You already have an open request ({existing.request_id}). The purohit will respond there.")
+        preferred_time=_parse_time(request.POST.get('time')),
+        message=(request.POST.get('message') or request.POST.get('special_requests') or '').strip(),
+    )
+    if code == 'created':
+        messages.success(request, message)
         return redirect('dashboard:customer')
-
-    travel_request = TravelRequest.objects.create(
-        customer=request.user,
-        purohit=purohit,
-        puja_package=package,
-        city=city,
-        area=area,
-        address=address,
-        venue_type=venue_type,
-        preferred_date=preferred_date,
-        preferred_time=preferred_time,
-        message=message,
-    )
-    Notification.objects.create(
-        user=purohit.profile.user,
-        title='Travel request',
-        message=(
-            f"{request.user.get_full_name() or request.user.username} asked you to come to "
-            f"{area.name}, {city.name} on {preferred_date:%d %b} for {package.puja.name}."
-        ),
-        link='/dashboard/purohit/#travel-requests',
-    )
-    messages.success(
-        request,
-        f"Visit request {travel_request.request_id} sent. You pay only if they accept and you book.",
-    )
-    return redirect('dashboard:customer')
+    if code == 'already_open':
+        messages.info(request, message)
+        return redirect('dashboard:customer')
+    if code == 'already_covers':
+        messages.info(request, message)
+        return redirect('bookings:book', package_id=package.id)
+    if code == 'own_listing':
+        messages.error(request, message)
+        return redirect('dashboard:purohit')
+    messages.error(request, message)
+    return redirect('bookings:book', package_id=package.id)
 
 
 import razorpay

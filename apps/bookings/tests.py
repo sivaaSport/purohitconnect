@@ -561,6 +561,26 @@ class BookingTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertJSONEqual(response.content, {'status': 'invalid_signature'})
 
+    def test_razorpay_webhook_requires_secret_when_not_debug(self):
+        payload = {
+            'event': 'payment.captured',
+            'payload': {'payment': {'entity': {'id': 'pay_x', 'order_id': 'order_x'}}},
+        }
+        body = json.dumps(payload).encode('utf-8')
+        signature = hmac.new(
+            settings.RAZORPAY_KEY_SECRET.encode('utf-8'),
+            body,
+            hashlib.sha256,
+        ).hexdigest()
+        with self.settings(DEBUG=False, RAZORPAY_ALLOW_MOCK=False, RAZORPAY_WEBHOOK_SECRET=''):
+            response = self.client.post(
+                reverse('accounts:razorpay_webhook'),
+                body,
+                content_type='application/json',
+                HTTP_X_RAZORPAY_SIGNATURE=signature,
+            )
+        self.assertEqual(response.status_code, 400)
+
     @patch('apps.accounts.payment_service.PaymentProcessor.create_order')
     def test_full_razorpay_payment_creates_order(self, mock_create_order):
         mock_create_order.return_value = {'id': 'order_full_rzp'}

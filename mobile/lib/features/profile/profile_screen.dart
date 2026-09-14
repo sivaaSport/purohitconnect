@@ -10,9 +10,12 @@ import 'my_bookings_screen.dart';
 import 'support_center_screen.dart';
 import 'notifications_screen.dart';
 import '../auth/welcome_screen.dart';
+import '../navigation/workspace_home.dart';
+import '../../core/widgets/ui_kit.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final bool purohitMode;
+  const ProfileScreen({super.key, this.purohitMode = false});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -40,7 +43,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: AppTheme.surfaceCream,
       appBar: AppBar(
-        title: const Text('Devotee Profile'),
+        title: Text(widget.purohitMode ? 'Purohit profile' : 'Devotee Profile'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -184,6 +187,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     CupertinoIcons.question_circle,
                     () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportCenterScreen())),
                   ),
+                  if (auth.canActAsPurohit) ...[
+                    const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                    _buildMenuItem(
+                      context,
+                      widget.purohitMode ? 'Switch to devotee workspace' : 'Switch to purohit workspace',
+                      widget.purohitMode ? 'Book rituals as a devotee' : 'Accept bookings and travel requests',
+                      CupertinoIcons.arrow_2_squarepath,
+                      () async {
+                        await auth.setWorkspace(widget.purohitMode ? 'devotee' : 'purohit');
+                        if (!context.mounted) return;
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (_) => const WorkspaceHome()),
+                          (route) => false,
+                        );
+                      },
+                    ),
+                  ] else ...[
+                    const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                    _buildMenuItem(
+                      context,
+                      'Open purohit workspace',
+                      'Offer pujas and manage incoming bookings',
+                      CupertinoIcons.rosette,
+                      () async {
+                        final ok = await auth.enablePurohitWorkspace();
+                        if (!context.mounted) return;
+                        if (!ok) {
+                          showAppSnack(context, auth.errorMessage ?? 'Could not open purohit workspace', error: true);
+                          return;
+                        }
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (_) => const WorkspaceHome()),
+                          (route) => false,
+                        );
+                      },
+                    ),
+                  ],
                   const Divider(height: 1, color: Color(0xFFF1F5F9)),
                   _buildMenuItem(
                     context,

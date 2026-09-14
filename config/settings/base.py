@@ -114,6 +114,8 @@ RAZORPAY_CURRENCY = 'INR'
 RAZORPAY_WEBHOOK_SECRET = env('RAZORPAY_WEBHOOK_SECRET', default=None)
 # Allow local mock checkout when Razorpay keys are missing/placeholder (dev only)
 RAZORPAY_ALLOW_MOCK = env.bool('RAZORPAY_ALLOW_MOCK', default=True)
+# Flutter web origins allowed to call /api/v1/. Empty in production unless set.
+CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[])
 # RazorpayX current account number used as source for payouts
 RAZORPAYX_ACCOUNT_NUMBER = env('RAZORPAYX_ACCOUNT_NUMBER', default=None)
 RAZORPAYX_PAYOUT_MODE = env('RAZORPAYX_PAYOUT_MODE', default='IMPS')

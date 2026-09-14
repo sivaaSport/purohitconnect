@@ -2,6 +2,8 @@ from decimal import Decimal
 
 from django.conf import settings
 
+from apps.bookings.location import coverage_payload
+
 
 def _media_url(request, filefield):
     if not filefield:
@@ -39,6 +41,9 @@ def user_payload(user, request=None):
         'last_name': user.last_name or '',
         'email': user.email or '',
         'role': user.role,
+        'can_act_as_purohit': bool(getattr(user, 'can_act_as_purohit', lambda: False)()),
+        'can_act_as_devotee': True,
+        'has_dual_workspace': bool(getattr(user, 'has_dual_workspace', lambda: False)()),
         'wallet_balance': _money(user.wallet_balance),
         'is_phone_verified': bool(user.is_phone_verified),
         'city': city,
@@ -110,6 +115,11 @@ def package_payload(package):
         'buffer_minutes': package.get_buffer_minutes(),
         'venues': venues,
         'venue_notes': package.venue_notes or '',
+        'category_name': (
+            package.puja.category.name
+            if package.puja_id and getattr(package.puja, 'category_id', None)
+            else ''
+        ),
     }
 
 
@@ -157,6 +167,7 @@ def purohit_payload(purohit, request=None, include_packages=False):
         ][:16],
         'accepts_travel_requests': bool(purohit.accepts_travel_requests),
         'travel_note': purohit.travel_note or '',
+        'coverage': coverage_payload(purohit) if include_packages else None,
         'avatar_url': avatar,
         'work_start': purohit.work_start.strftime('%H:%M') if purohit.work_start else '06:00',
         'work_end': purohit.work_end.strftime('%H:%M') if purohit.work_end else '21:00',
@@ -178,7 +189,7 @@ def booking_payload(booking, request=None):
             has_review = bool(getattr(booking, 'review', None))
         except Exception:
             has_review = False
-    return {
+    payload = {
         'id': booking.id,
         'booking_id': booking.booking_id,
         'purohit_id': booking.purohit_id,
@@ -213,7 +224,26 @@ def booking_payload(booking, request=None):
         'cancellation_reason': booking.cancellation_reason or '',
         'has_review': has_review,
         'created_at': booking.created_at.isoformat() if booking.created_at else '',
+        'accepted_at': booking.accepted_at.isoformat() if booking.accepted_at else '',
+        'started_at': booking.started_at.isoformat() if booking.started_at else '',
+        'completed_at': booking.completed_at.isoformat() if booking.completed_at else '',
+        'customer_name': (booking.customer.get_full_name() or booking.customer.username) if booking.customer_id else '',
+        'customer_phone': (booking.customer.phone or '') if booking.customer_id else '',
     }
+    viewer = getattr(request, 'user', None) if request else None
+    if viewer and getattr(viewer, 'is_authenticated', False) and viewer.id == booking.customer_id:
+        payload['start_code'] = booking.start_code or ''
+        payload['complete_code'] = booking.complete_code or ''
+    listing_id = getattr(getattr(getattr(viewer, 'purohit_profile', None), 'purohit_listing', None), 'id', None)
+    if listing_id and listing_id == booking.purohit_id:
+        payload['can_confirm'] = (
+            booking.status == 'pending'
+            and booking.payment_status == 'success'
+            and not booking.accepted_at
+        )
+        payload['can_start'] = bool(booking.accepted_at) and not booking.started_at and booking.status == 'confirmed'
+        payload['can_complete'] = bool(booking.started_at) and booking.status != 'completed'
+    return payload
 
 
 def wallet_transaction_payload(txn):
@@ -272,6 +302,7 @@ def travel_request_payload(item):
         'purohit_name': item.purohit.name if item.purohit_id else '',
         'package_id': item.puja_package_id,
         'puja_name': puja.name if puja else 'Visit request',
+        'customer_name': (item.customer.get_full_name() or item.customer.username) if item.customer_id else '',
         'city': item.city.name if item.city_id else '',
         'area': item.area.name if item.area_id else '',
         'address': item.address or '',

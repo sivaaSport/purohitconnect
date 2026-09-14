@@ -71,4 +71,10 @@ class ApiConstants {
   static const travelRequests = '/travel-requests/';
   static const notifications = '/notifications/';
   static const support = '/support/';
+  static const purohitDashboard = '/workspace/purohit/';
+  static const purohitEnable = '/workspace/purohit/enable/';
+  static const purohitBookings = '/workspace/purohit/bookings/';
+  static const purohitTravel = '/workspace/purohit/travel-requests/';
+  static const purohitPackages = '/workspace/purohit/packages/';
+  static const purohitCalendar = '/workspace/purohit/calendar/';
 }

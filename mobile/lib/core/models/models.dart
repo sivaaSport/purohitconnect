@@ -29,6 +29,8 @@ class UserModel {
   final String city;
   final int? cityId;
   final String avatarUrl;
+  final bool canActAsPurohit;
+  final bool hasDualWorkspace;
 
   UserModel({
     required this.id,
@@ -42,6 +44,8 @@ class UserModel {
     this.city = '',
     this.cityId,
     this.avatarUrl = '',
+    this.canActAsPurohit = false,
+    this.hasDualWorkspace = false,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -57,6 +61,8 @@ class UserModel {
       city: json['city']?.toString() ?? '',
       cityId: json['city_id'] == null ? null : _toInt(json['city_id']),
       avatarUrl: _cleanMediaUrl(json['avatar_url']),
+      canActAsPurohit: json['can_act_as_purohit'] == true || json['role']?.toString() == 'purohit',
+      hasDualWorkspace: _toBool(json['has_dual_workspace']),
     );
   }
 
@@ -73,6 +79,8 @@ class UserModel {
       city: city,
       cityId: cityId,
       avatarUrl: avatarUrl,
+      canActAsPurohit: canActAsPurohit,
+      hasDualWorkspace: hasDualWorkspace,
     );
   }
 }
@@ -165,6 +173,7 @@ class PujaModel {
   final String categoryName;
   final String description;
   final double baseDurationHours;
+  final List<String> typicalVenues;
 
   PujaModel({
     required this.id,
@@ -174,6 +183,7 @@ class PujaModel {
     required this.categoryName,
     required this.description,
     required this.baseDurationHours,
+    this.typicalVenues = const [],
   });
 
   factory PujaModel.fromJson(Map<String, dynamic> json) {
@@ -185,6 +195,7 @@ class PujaModel {
       categoryName: json['category_name']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
       baseDurationHours: _toDouble(json['base_duration_hours'] ?? 2),
+      typicalVenues: (json['typical_venues'] as List?)?.map((e) => e.toString()).toList() ?? const [],
     );
   }
 }
@@ -211,7 +222,10 @@ class PurohitPackageModel {
   final double samagriPrice;
   final String customDescription;
   final double durationHours;
+  final int bufferMinutes;
   final List<VenueOption> venues;
+  final String venueNotes;
+  final String categoryName;
 
   PurohitPackageModel({
     required this.id,
@@ -223,7 +237,10 @@ class PurohitPackageModel {
     required this.samagriPrice,
     required this.customDescription,
     required this.durationHours,
+    this.bufferMinutes = 30,
     this.venues = const [],
+    this.venueNotes = '',
+    this.categoryName = '',
   });
 
   factory PurohitPackageModel.fromJson(Map<String, dynamic> json) {
@@ -238,7 +255,74 @@ class PurohitPackageModel {
       samagriPrice: _toDouble(json['samagri_price']),
       customDescription: json['custom_description']?.toString() ?? '',
       durationHours: _toDouble(json['duration_hours'] ?? 2),
+      bufferMinutes: _toInt(json['buffer_minutes'] ?? 30),
       venues: raw.map((e) => VenueOption.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
+      venueNotes: json['venue_notes']?.toString() ?? '',
+      categoryName: json['category_name']?.toString() ?? '',
+    );
+  }
+}
+
+class CoveragePlace {
+  final int cityId;
+  final int? areaId;
+  final String kind;
+  final String start;
+  final String end;
+  final String label;
+
+  CoveragePlace({
+    required this.cityId,
+    this.areaId,
+    required this.kind,
+    this.start = '',
+    this.end = '',
+    this.label = '',
+  });
+
+  bool matches(int cityId, int? areaId) {
+    if (this.cityId != cityId) return false;
+    if (this.areaId == null) return true;
+    return this.areaId == areaId;
+  }
+
+  factory CoveragePlace.fromJson(Map<String, dynamic> json) {
+    final rawArea = json['areaId'] ?? json['area_id'];
+    final area = _toInt(rawArea);
+    return CoveragePlace(
+      cityId: _toInt(json['cityId'] ?? json['city_id']),
+      areaId: (rawArea == null || rawArea == '' || area == 0) ? null : area,
+      kind: json['kind']?.toString() ?? 'permanent',
+      start: json['start']?.toString() ?? '',
+      end: json['end']?.toString() ?? '',
+      label: json['label']?.toString() ?? '',
+    );
+  }
+}
+
+class CoverageInfo {
+  final bool acceptsTravel;
+  final List<CoveragePlace> permanent;
+  final List<CoveragePlace> places;
+
+  CoverageInfo({
+    required this.acceptsTravel,
+    this.permanent = const [],
+    this.places = const [],
+  });
+
+  factory CoverageInfo.fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return CoverageInfo(acceptsTravel: true);
+    }
+    return CoverageInfo(
+      acceptsTravel: json['acceptsTravel'] == false ? false : true,
+      permanent: (json['permanent'] as List? ?? [])
+          .map((item) => CoveragePlace.fromJson(Map<String, dynamic>.from(item as Map)))
+          .toList(),
+      places: (json['places'] as List? ?? [])
+          .map((item) => CoveragePlace.fromJson(Map<String, dynamic>.from(item as Map)))
+          .toList(),
     );
   }
 }
@@ -297,6 +381,7 @@ class PurohitModel {
   final String avatarUrl;
   final bool acceptsTravelRequests;
   final String travelNote;
+  final CoverageInfo? coverage;
 
   PurohitModel({
     required this.id,
@@ -321,6 +406,7 @@ class PurohitModel {
     this.avatarUrl = '',
     this.acceptsTravelRequests = true,
     this.travelNote = '',
+    this.coverage,
   });
 
   factory PurohitModel.fromJson(Map<String, dynamic> json) {
@@ -354,6 +440,9 @@ class PurohitModel {
       avatarUrl: _cleanMediaUrl(json['avatar_url']),
       acceptsTravelRequests: json['accepts_travel_requests'] == false ? false : true,
       travelNote: json['travel_note']?.toString() ?? '',
+      coverage: json['coverage'] is Map
+          ? CoverageInfo.fromJson(Map<String, dynamic>.from(json['coverage'] as Map))
+          : null,
     );
   }
 }
@@ -403,6 +492,13 @@ class BookingModel {
   final bool hasReview;
   final String createdAt;
   final String cancellationReason;
+  final String customerName;
+  final String startCode;
+  final String completeCode;
+  final bool canConfirm;
+  final bool canStart;
+  final bool canComplete;
+  final bool started;
 
   BookingModel({
     required this.id,
@@ -432,6 +528,13 @@ class BookingModel {
     this.hasReview = false,
     required this.createdAt,
     this.cancellationReason = '',
+    this.customerName = '',
+    this.startCode = '',
+    this.completeCode = '',
+    this.canConfirm = false,
+    this.canStart = false,
+    this.canComplete = false,
+    this.started = false,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
@@ -463,6 +566,13 @@ class BookingModel {
       hasReview: _toBool(json['has_review']),
       createdAt: json['created_at']?.toString() ?? json['date']?.toString() ?? '',
       cancellationReason: json['cancellation_reason']?.toString() ?? '',
+      customerName: json['customer_name']?.toString() ?? '',
+      startCode: json['start_code']?.toString() ?? '',
+      completeCode: json['complete_code']?.toString() ?? '',
+      canConfirm: _toBool(json['can_confirm']),
+      canStart: _toBool(json['can_start']),
+      canComplete: _toBool(json['can_complete']),
+      started: (json['started_at']?.toString() ?? '').isNotEmpty,
     );
   }
 
@@ -555,6 +665,7 @@ class TravelRequestModel {
   final String statusLabel;
   final int purohitId;
   final String purohitName;
+  final String customerName;
   final int? packageId;
   final String pujaName;
   final String city;
@@ -575,6 +686,7 @@ class TravelRequestModel {
     required this.statusLabel,
     required this.purohitId,
     required this.purohitName,
+    this.customerName = '',
     this.packageId,
     required this.pujaName,
     this.city = '',
@@ -597,6 +709,7 @@ class TravelRequestModel {
       statusLabel: json['status_label']?.toString() ?? json['status']?.toString() ?? '',
       purohitId: _toInt(json['purohit_id']),
       purohitName: json['purohit_name']?.toString() ?? '',
+      customerName: json['customer_name']?.toString() ?? '',
       packageId: json['package_id'] == null ? null : _toInt(json['package_id']),
       pujaName: json['puja_name']?.toString() ?? 'Visit request',
       city: json['city']?.toString() ?? '',
@@ -685,6 +798,135 @@ class PaymentOptions {
       mixedAvailable: _toBool(mixed['available']),
       mixedWallet: _toDouble(mixed['wallet_amount']),
       mixedRazorpay: _toDouble(mixed['razorpay_amount']),
+    );
+  }
+}
+
+class CalendarDayCell {
+  final String date;
+  final int day;
+  final bool inMonth;
+  final bool isToday;
+  final bool isPast;
+  final String status;
+  final int blockCount;
+
+  CalendarDayCell({
+    required this.date,
+    required this.day,
+    required this.inMonth,
+    required this.isToday,
+    required this.isPast,
+    required this.status,
+    this.blockCount = 0,
+  });
+
+  factory CalendarDayCell.fromJson(Map<String, dynamic> json) {
+    return CalendarDayCell(
+      date: json['date']?.toString() ?? '',
+      day: _toInt(json['day']),
+      inMonth: _toBool(json['in_month']),
+      isToday: _toBool(json['is_today']),
+      isPast: _toBool(json['is_past']),
+      status: json['status']?.toString() ?? '',
+      blockCount: _toInt(json['block_count']),
+    );
+  }
+}
+
+class AvailabilityBlock {
+  final int id;
+  final String date;
+  final String startTime;
+  final String endTime;
+  final bool isAllDay;
+  final String label;
+  final String reason;
+
+  AvailabilityBlock({
+    required this.id,
+    required this.date,
+    this.startTime = '',
+    this.endTime = '',
+    this.isAllDay = false,
+    this.label = '',
+    this.reason = '',
+  });
+
+  factory AvailabilityBlock.fromJson(Map<String, dynamic> json) {
+    return AvailabilityBlock(
+      id: _toInt(json['id']),
+      date: json['date']?.toString() ?? '',
+      startTime: json['start_time']?.toString() ?? '',
+      endTime: json['end_time']?.toString() ?? '',
+      isAllDay: _toBool(json['is_all_day']),
+      label: json['label']?.toString() ?? '',
+      reason: json['reason']?.toString() ?? '',
+    );
+  }
+}
+
+class PurohitCalendarState {
+  final int year;
+  final int month;
+  final String monthLabel;
+  final String workStart;
+  final String workEnd;
+  final double calendarDuration;
+  final int? previewPackageId;
+  final List<List<CalendarDayCell>> weeks;
+  final String selectedDay;
+  final List<AvailabilityBlock> selectedBlocks;
+  final List<Map<String, dynamic>> selectedBookings;
+  final List<TimeSlot> selectedSlots;
+  final List<PurohitPackageModel> packages;
+  final String message;
+
+  PurohitCalendarState({
+    required this.year,
+    required this.month,
+    required this.monthLabel,
+    this.workStart = '06:00',
+    this.workEnd = '21:00',
+    this.calendarDuration = 2,
+    this.previewPackageId,
+    this.weeks = const [],
+    this.selectedDay = '',
+    this.selectedBlocks = const [],
+    this.selectedBookings = const [],
+    this.selectedSlots = const [],
+    this.packages = const [],
+    this.message = '',
+  });
+
+  factory PurohitCalendarState.fromJson(Map<String, dynamic> json) {
+    return PurohitCalendarState(
+      year: _toInt(json['year']),
+      month: _toInt(json['month']),
+      monthLabel: json['month_label']?.toString() ?? '',
+      workStart: json['work_start']?.toString() ?? '06:00',
+      workEnd: json['work_end']?.toString() ?? '21:00',
+      calendarDuration: _toDouble(json['calendar_duration'] ?? 2),
+      previewPackageId: json['preview_package_id'] == null ? null : _toInt(json['preview_package_id']),
+      weeks: (json['weeks'] as List? ?? [])
+          .map((week) => (week as List)
+              .map((cell) => CalendarDayCell.fromJson(Map<String, dynamic>.from(cell as Map)))
+              .toList())
+          .toList(),
+      selectedDay: json['selected_day']?.toString() ?? '',
+      selectedBlocks: (json['selected_blocks'] as List? ?? [])
+          .map((item) => AvailabilityBlock.fromJson(Map<String, dynamic>.from(item as Map)))
+          .toList(),
+      selectedBookings: (json['selected_bookings'] as List? ?? [])
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList(),
+      selectedSlots: (json['selected_slots'] as List? ?? [])
+          .map((item) => TimeSlot.fromJson(Map<String, dynamic>.from(item as Map)))
+          .toList(),
+      packages: (json['packages'] as List? ?? [])
+          .map((item) => PurohitPackageModel.fromJson(Map<String, dynamic>.from(item as Map)))
+          .toList(),
+      message: json['message']?.toString() ?? '',
     );
   }
 }

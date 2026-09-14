@@ -65,12 +65,24 @@ class _BookingScreenState extends State<BookingScreen> {
     }
   }
 
-  Future<void> _submit() async {
-    final booking = context.read<BookingProvider>();
+  void _syncFields(BookingProvider booking) {
     booking.setAddress(_addressController.text.trim());
     booking.setSpecialRequests(_notesController.text.trim());
+  }
+
+  Future<void> _submit() async {
+    final booking = context.read<BookingProvider>();
+    _syncFields(booking);
+    if (booking.coverageStatus.mode == CoverageMode.ask) {
+      await _sendTravelRequest();
+      return;
+    }
     final res = await booking.confirmBooking();
     if (!mounted) return;
+    if (res['code'] == 'travel_request_required') {
+      showAppSnack(context, res['error']?.toString() ?? 'Request a visit first.', error: true);
+      return;
+    }
     if (res['success'] == true && res['booking'] != null) {
       final created = BookingModel.fromJson(Map<String, dynamic>.from(res['booking'] as Map));
       Navigator.pushReplacement(
@@ -79,6 +91,22 @@ class _BookingScreenState extends State<BookingScreen> {
       );
     } else {
       showAppSnack(context, res['error']?.toString() ?? 'Could not create booking', error: true);
+    }
+  }
+
+  Future<void> _sendTravelRequest() async {
+    final booking = context.read<BookingProvider>();
+    _syncFields(booking);
+    final res = await booking.sendTravelRequest();
+    if (!mounted) return;
+    if (res['success'] == true) {
+      final messenger = ScaffoldMessenger.of(context);
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      messenger.showSnackBar(SnackBar(
+        content: Text(res['message']?.toString() ?? 'Visit request sent. You pay only if they accept and you book.'),
+      ));
+    } else {
+      showAppSnack(context, res['error']?.toString() ?? 'Could not send visit request', error: true);
     }
   }
 
@@ -180,6 +208,24 @@ class _BookingScreenState extends State<BookingScreen> {
             )
           else
             const Text('Home ceremony', style: TextStyle(color: AppTheme.textMuted)),
+          if ((booking.selectedPurohit?.coverage?.places ?? []).isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Text('Places they already offer', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: booking.selectedPurohit!.coverage!.places.map((place) {
+                final selected = booking.city?.id == place.cityId &&
+                    (place.areaId == null || booking.area?.id == place.areaId);
+                return AppSelectChip(
+                  label: place.label.isNotEmpty ? place.label : '${place.cityId}',
+                  selected: selected,
+                  onTap: () => booking.selectOfferedPlace(place),
+                );
+              }).toList(),
+            ),
+          ],
           const SizedBox(height: 16),
           DropdownButtonFormField<CityModel>(
             value: booking.city,
@@ -204,8 +250,39 @@ class _BookingScreenState extends State<BookingScreen> {
           TextField(
             controller: _notesController,
             maxLines: 2,
-            decoration: const InputDecoration(labelText: 'Sankalpam / special requests'),
+            decoration: InputDecoration(
+              labelText: booking.coverageStatus.mode == CoverageMode.ask
+                  ? 'Message to the purohit (optional)'
+                  : 'Sankalpam / special requests',
+            ),
           ),
+          if (booking.coverageStatus.title.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            SurfaceCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    booking.coverageStatus.title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      color: booking.coverageStatus.mode == CoverageMode.covered
+                          ? AppTheme.tulsiGreen
+                          : booking.coverageStatus.mode == CoverageMode.closed
+                              ? AppTheme.sindoorRed
+                              : AppTheme.sacredGold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    booking.coverageStatus.body,
+                    style: const TextStyle(fontSize: 13, color: AppTheme.textMuted, height: 1.35),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
@@ -230,10 +307,10 @@ class _BookingScreenState extends State<BookingScreen> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
           child: ElevatedButton(
-            onPressed: booking.isLoading ? null : _submit,
+            onPressed: booking.isLoading || booking.coverageStatus.mode == CoverageMode.closed ? null : _submit,
             child: booking.isLoading
                 ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.4))
-                : const Text('Create booking & pay'),
+                : Text(booking.coverageStatus.mode == CoverageMode.ask ? 'Send travel request' : 'Create booking & pay'),
           ),
         ),
       ),

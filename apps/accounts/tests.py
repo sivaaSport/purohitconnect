@@ -34,7 +34,26 @@ class AccountTests(TestCase):
         success, message = OTP.verify_otp(self.phone, '000000', 'login')
         self.assertFalse(success)
         self.assertIn('Invalid OTP', message)
-        self.assertEqual(OTP.objects.filter(phone=self.phone).count(), 1)
+        otp.refresh_from_db()
+        self.assertEqual(otp.attempts, 1)
+        self.assertEqual(OTP.objects.filter(phone=self.phone, is_used=False).count(), 1)
+
+    def test_otp_lockout_after_max_attempts(self):
+        otp = OTP.generate_otp(self.phone, 'login')
+        for _ in range(otp.max_attempts):
+            success, _message = OTP.verify_otp(self.phone, '000000', 'login')
+            self.assertFalse(success)
+        success, message = OTP.verify_otp(self.phone, otp.otp_code, 'login')
+        self.assertFalse(success)
+        self.assertIn('Maximum attempts', message)
+
+    def test_new_otp_invalidates_previous(self):
+        first = OTP.generate_otp(self.phone, 'login')
+        second = OTP.generate_otp(self.phone, 'login')
+        success, _message = OTP.verify_otp(self.phone, first.otp_code, 'login')
+        self.assertFalse(success)
+        success, _message = OTP.verify_otp(self.phone, second.otp_code, 'login')
+        self.assertTrue(success)
 
     def test_send_otp_sms_mock(self):
         success, message, sid = send_otp_sms(self.phone, '123456', 'login')
@@ -72,7 +91,11 @@ class AccountTests(TestCase):
         verify_page = self.client.get(reverse('accounts:otp_verification'))
         self.assertEqual(verify_page.status_code, 200)
         self.assertContains(verify_page, 'Verify Your Phone')
-        self.assertContains(verify_page, 'Development mode')
+        from apps.accounts.utils import sms_service
+        with self.settings(DEBUG=True):
+            debug_page = self.client.get(reverse('accounts:otp_verification'))
+        if not sms_service.is_configured():
+            self.assertContains(debug_page, 'Development mode')
 
     def test_wallet_credit_debit_transfer(self):
         success, transaction, message = wallet_service.credit_wallet(

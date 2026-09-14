@@ -6,7 +6,7 @@ import 'core/state/auth_provider.dart';
 import 'core/state/booking_provider.dart';
 import 'core/state/notification_provider.dart';
 import 'features/auth/welcome_screen.dart';
-import 'features/navigation/main_navigation_screen.dart';
+import 'features/navigation/workspace_home.dart';
 import 'features/support/support_bot_overlay.dart';
 
 void main() {
@@ -71,6 +71,6 @@ class _AuthGate extends StatelessWidget {
       );
     }
     if (!auth.isAuthenticated) return const WelcomeScreen();
-    return const MainNavigationScreen();
+    return const WorkspaceHome();
   }
 }

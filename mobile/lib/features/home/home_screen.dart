@@ -46,10 +46,22 @@ class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey _travelKey = GlobalKey();
   final GlobalKey _browseKey = GlobalKey();
 
+  int _seenTravelRevision = 0;
+
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final revision = context.watch<BookingProvider>().travelRevision;
+    if (revision != _seenTravelRevision) {
+      _seenTravelRevision = revision;
+      if (revision > 0) _loadData();
+    }
   }
 
   PujaCategoryModel? get _selectedCategory {

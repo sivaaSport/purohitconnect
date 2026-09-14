@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import views
+from . import workspace_views
 
 app_name = 'api'
 
@@ -40,4 +41,21 @@ urlpatterns = [
     path('notifications/<int:notification_id>/read/', views.mark_notification_read, name='notification_read'),
 
     path('support/', views.support, name='support'),
+
+    path('workspace/purohit/', workspace_views.purohit_dashboard, name='purohit_dashboard'),
+    path('workspace/purohit/enable/', workspace_views.enable_purohit, name='purohit_enable'),
+    path('workspace/purohit/bookings/', workspace_views.purohit_bookings, name='purohit_bookings'),
+    path(
+        'workspace/purohit/bookings/<str:booking_id>/status/',
+        workspace_views.purohit_booking_status,
+        name='purohit_booking_status',
+    ),
+    path('workspace/purohit/travel-requests/', workspace_views.purohit_travel_requests, name='purohit_travel_inbox'),
+    path(
+        'workspace/purohit/travel-requests/<int:request_pk>/respond/',
+        workspace_views.purohit_travel_respond,
+        name='purohit_travel_respond',
+    ),
+    path('workspace/purohit/packages/', workspace_views.purohit_packages, name='purohit_packages'),
+    path('workspace/purohit/calendar/', workspace_views.purohit_calendar, name='purohit_calendar'),
 ]

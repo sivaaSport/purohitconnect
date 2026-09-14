@@ -6,7 +6,7 @@ import '../../core/state/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/ui_kit.dart';
-import '../navigation/main_navigation_screen.dart';
+import '../navigation/workspace_home.dart';
 
 class OtpScreen extends StatefulWidget {
   final String phone;
@@ -74,7 +74,7 @@ class _OtpScreenState extends State<OtpScreen> {
     if (!mounted) return;
     if (ok) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+        MaterialPageRoute(builder: (_) => const WorkspaceHome()),
         (_) => false,
       );
     } else {

@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from apps.accounts.models import CustomUser, OTP, PurohitProfile
 from apps.accounts.utils import wallet_service
-from apps.bookings.models import Booking
+from apps.bookings.models import Booking, TravelRequest
 from apps.core.models import Area, City, ServiceRequest
 from apps.pujas.models import Puja, PujaCategory, PurohitPujaPackage
 from apps.purohits.models import Purohit, PurohitMedia
@@ -89,6 +89,28 @@ class MobileApiTests(TestCase):
         self.assertEqual(me.json()['user']['phone'], self.phone)
         self.assertEqual(me.json()['user']['avatar_url'], '')
 
+    def test_otp_resend_is_rate_limited(self):
+        first = self.client.post(
+            reverse('api:send_otp'),
+            data={'phone': self.phone, 'action': 'login'},
+            content_type='application/json',
+        )
+        self.assertEqual(first.status_code, 200, first.content)
+        second = self.client.post(
+            reverse('api:send_otp'),
+            data={'phone': self.phone, 'action': 'login'},
+            content_type='application/json',
+        )
+        self.assertEqual(second.status_code, 429)
+
+    def test_cors_allows_local_flutter_origin(self):
+        ok = self.client.get(reverse('api:categories'), HTTP_ORIGIN='http://localhost:5173')
+        self.assertEqual(ok.status_code, 200)
+        self.assertEqual(ok['Access-Control-Allow-Origin'], 'http://localhost:5173')
+        blocked = self.client.get(reverse('api:categories'), HTTP_ORIGIN='https://evil.example')
+        self.assertEqual(blocked.status_code, 200)
+        self.assertNotEqual(blocked.get('Access-Control-Allow-Origin'), 'https://evil.example')
+
     def test_signup_creates_customer(self):
         phone = '+919111122222'
         send = self.client.post(
@@ -139,6 +161,9 @@ class MobileApiTests(TestCase):
         self.assertTrue(gallery[0]['url'])
         listed = self.client.get(reverse('api:purohits'))
         self.assertEqual(listed.json()['purohits'][0]['gallery'], [])
+        self.assertIsNone(listed.json()['purohits'][0].get('coverage'))
+        self.assertIn('coverage', detail.json()['purohit'])
+        self.assertTrue(detail.json()['purohit']['coverage']['acceptsTravel'])
 
     def test_catalog_follows_sacred_ritual_order(self):
         household = PujaCategory.objects.get(name='Household Pujas')
@@ -216,6 +241,49 @@ class MobileApiTests(TestCase):
         self.assertEqual(booking.payment_status, 'success')
         self.assertEqual(booking.total_amount, Decimal('2500.00'))
 
+    def test_razorpay_pay_returns_checkout_payload(self):
+        token = self._login()
+        event_date = (timezone.localdate() + timedelta(days=5)).isoformat()
+        create = self.client.post(
+            reverse('api:create_booking'),
+            data={
+                'package_id': self.package.id,
+                'event_date': event_date,
+                'event_time': '09:00',
+                'address': 'Plot 42, Jubilee Hills',
+                'city_id': self.city.id,
+                'area_id': self.area.id,
+                'venue_type': 'home',
+            },
+            **self._auth_headers(token),
+        )
+        self.assertEqual(create.status_code, 200, create.content)
+        booking_id = create.json()['booking']['booking_id']
+        pay = self.client.post(
+            reverse('api:booking_pay', args=[booking_id]),
+            data={'method': 'razorpay'},
+            **self._auth_headers(token),
+        )
+        self.assertEqual(pay.status_code, 200, pay.content)
+        order = pay.json()['razorpay']
+        self.assertTrue(order['id'])
+        self.assertIn('key', order)
+        self.assertTrue(order['mock'] or str(order['id']).startswith('order_mock_') or str(order['id']).startswith('order_'))
+        verify = self.client.post(
+            reverse('api:verify_booking_payment', args=[booking_id]),
+            data={
+                'razorpay_order_id': order['id'],
+                'razorpay_payment_id': 'pay_mock_1',
+                'razorpay_signature': 'mock_signature',
+            },
+            **self._auth_headers(token),
+        )
+        if order.get('mock'):
+            self.assertEqual(verify.status_code, 200, verify.content)
+            self.assertTrue(verify.json()['paid'])
+        else:
+            self.assertEqual(verify.status_code, 400)
+
     def test_support_ticket(self):
         token = self._login()
         res = self.client.post(
@@ -225,3 +293,219 @@ class MobileApiTests(TestCase):
         )
         self.assertEqual(res.status_code, 200)
         self.assertTrue(ServiceRequest.objects.filter(user=self.customer).exists())
+
+    def test_travel_request_for_unserved_area(self):
+        outside = Area.objects.create(city=self.city, name='Gachibowli', pincode='500032')
+        token = self._login()
+        event_date = (timezone.localdate() + timedelta(days=5)).isoformat()
+        blocked = self.client.post(
+            reverse('api:create_booking'),
+            data={
+                'package_id': self.package.id,
+                'event_date': event_date,
+                'event_time': '09:00',
+                'address': 'Far away',
+                'city_id': self.city.id,
+                'area_id': outside.id,
+                'venue_type': 'home',
+            },
+            **self._auth_headers(token),
+        )
+        self.assertEqual(blocked.status_code, 400)
+        self.assertEqual(blocked.json()['code'], 'travel_request_required')
+
+        created = self.client.post(
+            reverse('api:travel_requests'),
+            data={
+                'package_id': self.package.id,
+                'event_date': event_date,
+                'event_time': '09:00',
+                'address': 'Far away',
+                'city_id': self.city.id,
+                'area_id': outside.id,
+                'venue_type': 'home',
+                'message': 'Family house is here',
+            },
+            **self._auth_headers(token),
+        )
+        self.assertEqual(created.status_code, 200, created.content)
+        self.assertEqual(created.json()['code'], 'created')
+        travel = TravelRequest.objects.get()
+        self.assertEqual(travel.status, 'pending')
+        self.assertEqual(travel.area, outside)
+        listed = self.client.get(reverse('api:travel_requests'), **self._auth_headers(token))
+        self.assertEqual(listed.json()['pending_count'], 1)
+
+        again = self.client.post(
+            reverse('api:travel_requests'),
+            data={
+                'package_id': self.package.id,
+                'event_date': event_date,
+                'event_time': '09:00',
+                'address': 'Far away',
+                'city_id': self.city.id,
+                'area_id': outside.id,
+                'venue_type': 'home',
+            },
+            **self._auth_headers(token),
+        )
+        self.assertEqual(again.status_code, 200)
+        self.assertEqual(again.json()['code'], 'already_open')
+        self.assertEqual(TravelRequest.objects.count(), 1)
+
+    def test_customer_cannot_open_purohit_workspace(self):
+        token = self._login()
+        res = self.client.get(reverse('api:purohit_dashboard'), **self._auth_headers(token))
+        self.assertEqual(res.status_code, 403)
+
+    def test_purohit_confirms_paid_booking_and_handles_travel(self):
+        from apps.core.models import Notification
+
+        wallet_service.credit_wallet(self.customer, Decimal('5000'), 'top_up', 'seed')
+        devotee = self._login()
+        event_date = (timezone.localdate() + timedelta(days=5)).isoformat()
+        create = self.client.post(
+            reverse('api:create_booking'),
+            data={
+                'package_id': self.package.id,
+                'event_date': event_date,
+                'event_time': '09:00',
+                'address': 'Plot 42, Jubilee Hills',
+                'city_id': self.city.id,
+                'area_id': self.area.id,
+                'venue_type': 'home',
+            },
+            **self._auth_headers(devotee),
+        )
+        booking_id = create.json()['booking']['booking_id']
+        self.client.post(
+            reverse('api:booking_pay', args=[booking_id]),
+            data={'method': 'wallet'},
+            **self._auth_headers(devotee),
+        )
+        priest = self._login(self.purohit_user.phone)
+        dash = self.client.get(reverse('api:purohit_dashboard'), **self._auth_headers(priest))
+        self.assertEqual(dash.status_code, 200, dash.content)
+        self.assertEqual(dash.json()['stats']['pending_requests'], 1)
+        confirm = self.client.post(
+            reverse('api:purohit_booking_status', args=[booking_id]),
+            data={'status': 'confirmed'},
+            **self._auth_headers(priest),
+        )
+        self.assertEqual(confirm.status_code, 200, confirm.content)
+        self.assertEqual(confirm.json()['code'], 'confirmed')
+        detail = self.client.get(reverse('api:booking_detail', args=[booking_id]), **self._auth_headers(devotee))
+        self.assertTrue(detail.json()['booking']['start_code'])
+        self.assertNotIn('start_code', confirm.json()['booking'])
+
+        outside = Area.objects.create(city=self.city, name='Madhapur', pincode='500081')
+        travel = self.client.post(
+            reverse('api:travel_requests'),
+            data={
+                'package_id': self.package.id,
+                'event_date': event_date,
+                'event_time': '11:00',
+                'address': 'Far house',
+                'city_id': self.city.id,
+                'area_id': outside.id,
+                'venue_type': 'home',
+            },
+            **self._auth_headers(devotee),
+        )
+        request_pk = travel.json()['travel_request']['id']
+        accept = self.client.post(
+            reverse('api:purohit_travel_respond', args=[request_pk]),
+            data={'decision': 'accept', 'travel_fee': 400},
+            **self._auth_headers(priest),
+        )
+        self.assertEqual(accept.status_code, 200, accept.content)
+        self.assertEqual(accept.json()['code'], 'accepted')
+        self.assertTrue(Notification.objects.filter(title='Travel request accepted').exists())
+
+    def test_purohit_manages_packages_and_calendar(self):
+        extra = Puja.objects.create(
+            category=self.puja.category,
+            name='Griha Pravesh',
+            description='Housewarming',
+            base_duration_hours=4,
+        )
+        priest = self._login(self.purohit_user.phone)
+        listed = self.client.get(reverse('api:purohit_packages'), **self._auth_headers(priest))
+        self.assertEqual(listed.status_code, 200, listed.content)
+        self.assertEqual(len(listed.json()['packages']), 1)
+        names = {item['name'] for item in listed.json()['available_pujas']}
+        self.assertIn('Griha Pravesh', names)
+
+        added = self.client.post(
+            reverse('api:purohit_packages'),
+            data={
+                'action': 'add',
+                'puja_id': extra.id,
+                'price': 4500,
+                'duration_hours': 4,
+                'buffer_minutes': 45,
+                'includes_samagri': True,
+                'samagri_price': 300,
+                'venues': ['home', 'temple'],
+                'venue_notes': 'I also go to the local mandir',
+            },
+            **self._auth_headers(priest),
+        )
+        self.assertEqual(added.status_code, 200, added.content)
+        self.assertEqual(added.json()['code'], 'added')
+        self.assertEqual(len(added.json()['packages']), 2)
+        new_pkg = next(item for item in added.json()['packages'] if item['puja_id'] == extra.id)
+        self.assertEqual(new_pkg['price'], 4500)
+        self.assertEqual([v['code'] for v in new_pkg['venues']], ['home', 'temple'])
+
+        updated = self.client.post(
+            reverse('api:purohit_packages'),
+            data={'action': 'update', 'package_id': self.package.id, 'price': 2500, 'duration_hours': 2, 'buffer_minutes': 30},
+            **self._auth_headers(priest),
+        )
+        self.assertEqual(updated.status_code, 200, updated.content)
+        satya = next(item for item in updated.json()['packages'] if item['id'] == self.package.id)
+        self.assertEqual(satya['price'], 2500)
+
+        blocked = self.client.post(
+            reverse('api:purohit_calendar'),
+            data={
+                'action': 'add_range',
+                'date': '2026-10-20',
+                'start_time': '10:00',
+                'end_time': '12:00',
+                'reason': 'Temple duty',
+            },
+            **self._auth_headers(priest),
+        )
+        self.assertEqual(blocked.status_code, 200, blocked.content)
+        self.assertEqual(blocked.json()['code'], 'range_blocked')
+        self.assertEqual(blocked.json()['selected_day'], '2026-10-20')
+        self.assertEqual(blocked.json()['selected_blocks'][0]['start_time'], '10:00')
+
+        month = self.client.get(
+            reverse('api:purohit_calendar') + '?year=2026&month=10&day=2026-10-20',
+            **self._auth_headers(priest),
+        )
+        self.assertEqual(month.status_code, 200)
+        self.assertEqual(month.json()['month'], 10)
+        day = next(
+            cell
+            for week in month.json()['weeks']
+            for cell in week
+            if cell['date'] == '2026-10-20'
+        )
+        self.assertEqual(day['status'], 'partial')
+
+        hours = self.client.post(
+            reverse('api:purohit_calendar'),
+            data={'action': 'set_work_hours', 'work_start': '07:00', 'work_end': '20:00', 'date': '2026-10-20'},
+            **self._auth_headers(priest),
+        )
+        self.assertEqual(hours.status_code, 200, hours.content)
+        self.assertEqual(hours.json()['work_start'], '07:00')
+        self.assertEqual(hours.json()['work_end'], '20:00')
+
+        devotee = self._login()
+        denied = self.client.get(reverse('api:purohit_packages'), **self._auth_headers(devotee))
+        self.assertEqual(denied.status_code, 403)
